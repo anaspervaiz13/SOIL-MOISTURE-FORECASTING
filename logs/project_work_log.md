@@ -61,9 +61,9 @@ Date started: 2026-05-06
 ## Step 8: New merged dataset saved and inspected
 
 - Saved merged hourly dataset to:
-  - `C:/Users/HP/Desktop/UNI/final work/data/processed/ismn_merged_hourly.csv`
+  - `data/processed/ismn_merged_hourly.csv`
 - Saved merge summary to:
-  - `C:/Users/HP/Desktop/UNI/final work/outputs/ismn/merge_summary.json`
+  - `outputs/ismn/merge_summary.json`
 - Final merged dataset shape:
   - `359,585` rows x `16` columns
 - Stations confirmed:
@@ -99,7 +99,7 @@ Date started: 2026-05-06
 ## Step 10: 48-hour forecasting dataset built from the new merged table
 
 - Input dataset used:
-  - `C:/Users/HP/Desktop/UNI/final work/data/processed/ismn_merged_hourly.csv`
+  - `data/processed/ismn_merged_hourly.csv`
 - Consolidated precipitation into one feature using priority:
   - `p_ecotech_rain_gauge`
   - else `p_ott_pluvio2s_amount`
@@ -126,11 +126,11 @@ Date started: 2026-05-06
 ## Step 11: Forecasting outputs saved and inspected
 
 - Saved full engineered forecasting dataset to:
-  - `C:/Users/HP/Desktop/UNI/final work/data/processed/ismn_forecasting_48h_full.csv`
+  - `data/processed/ismn_forecasting_48h_full.csv`
 - Saved model-ready forecasting dataset to:
-  - `C:/Users/HP/Desktop/UNI/final work/data/processed/ismn_forecasting_48h_ready.csv`
+  - `data/processed/ismn_forecasting_48h_ready.csv`
 - Saved forecasting summary to:
-  - `C:/Users/HP/Desktop/UNI/final work/outputs/ismn/final_dataset_summary.json`
+  - `outputs/ismn/final_dataset_summary.json`
 - Full dataset shape:
   - `359,585` rows x `116` columns
 - Model-ready dataset shape:

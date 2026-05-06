@@ -7,6 +7,8 @@ import pandas as pd
 from src.summarize_training_results import summarize_all_models, summarize_xgboost_feature_groups
 from src.train_xgboost_48h import resolve_output_dir_name
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+
 
 class TestSummarizeTrainingResults(unittest.TestCase):
     def test_resolve_output_dir_name_appends_output_tag(self):
@@ -14,7 +16,7 @@ class TestSummarizeTrainingResults(unittest.TestCase):
         self.assertEqual(resolve_output_dir_name("full_multiscale", "strong"), "full_multiscale__strong")
 
     def test_summarize_xgboost_feature_groups_collects_rows(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/summaries")
+        root = RUNTIME_DIR / "summaries"
         group_a = root / "baseline_limited"
         group_b = root / "full_multiscale"
         for folder in [group_a, group_b]:
@@ -42,7 +44,7 @@ class TestSummarizeTrainingResults(unittest.TestCase):
         self.assertEqual(len(summary), 2)
 
     def test_summarize_all_models_collects_cross_model_rows(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/all_model_summaries")
+        root = RUNTIME_DIR / "all_model_summaries"
         xgb_run = root / "xgboost" / "full_multiscale__strong"
         prophet_run = root / "prophet" / "prophet__safe"
         for folder in [xgb_run, prophet_run]:

@@ -10,6 +10,8 @@ from src.export_novelty_results import (
     build_xgboost_ablation_table,
 )
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+
 
 def write_summary(path: Path, rmse: float, mae: float, r2: float) -> None:
     pd.DataFrame(
@@ -32,7 +34,7 @@ class ArgsStub:
 
 class TestExportNoveltyResults(unittest.TestCase):
     def test_build_xgboost_ablation_table_adds_gain_columns(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/novelty_xgb")
+        root = RUNTIME_DIR / "novelty_xgb"
         experiments = {
             "baseline_limited__strong": ("baseline_limited", 0.0300),
             "short_lags__strong": ("short_lags", 0.0298),
@@ -55,7 +57,7 @@ class TestExportNoveltyResults(unittest.TestCase):
         self.assertGreater(table.iloc[0]["relative_rmse_gain_pct_vs_baseline"], 0.0)
 
     def test_build_benchmark_table_uses_best_knn_test_row(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/novelty_benchmark")
+        root = RUNTIME_DIR / "novelty_benchmark"
         xgb = root / "xgboost" / "full_multiscale"
         knn = root / "knn" / "baseline_limited__light"
         lstm = root / "lstm" / "lstm__cpu40"

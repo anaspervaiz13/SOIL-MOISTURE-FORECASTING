@@ -12,10 +12,12 @@ from src.train_stacking_48h import (
     select_best_knn_neighbor,
 )
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+
 
 class TestTrainStacking48h(unittest.TestCase):
     def test_select_best_knn_neighbor_uses_validation_rmse(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/stacking_knn")
+        root = RUNTIME_DIR / "stacking_knn"
         root.mkdir(parents=True, exist_ok=True)
         pd.DataFrame(
             [
@@ -28,7 +30,7 @@ class TestTrainStacking48h(unittest.TestCase):
         self.assertEqual(select_best_knn_neighbor(root), 13)
 
     def test_prediction_loaders_align_expected_columns(self):
-        root = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/stacking_models")
+        root = RUNTIME_DIR / "stacking_models"
         xgb_root = root / "xgboost"
         knn_root = root / "knn"
         prophet_root = root / "prophet"

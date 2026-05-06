@@ -12,51 +12,51 @@
 
 ## File Structure
 
-- `C:\Users\HP\Desktop\UNI\final work\src\build_ismn_merged.py`
+- `src/build_ismn_merged.py`
   - Raw ISMN parsing, QC filtering, replicate handling, merged hourly dataset generation
-- `C:\Users\HP\Desktop\UNI\final work\src\build_ismn_forecasting_dataset.py`
+- `src/build_ismn_forecasting_dataset.py`
   - Forecast target creation, multi-scale lag features, rolling features, model-ready dataset outputs
-- `C:\Users\HP\Desktop\UNI\final work\src\training\config.py`
+- `src/training/config.py`
   - Paths, shared constants, split settings, seeds, reusable experiment configuration
-- `C:\Users\HP\Desktop\UNI\final work\src\training\data.py`
+- `src/training/data.py`
   - Dataset loading, temporal splits, filtering, feature/target extraction
-- `C:\Users\HP\Desktop\UNI\final work\src\training\feature_sets.py`
+- `src/training/feature_sets.py`
   - Feature groups for ablation and benchmark experiments
-- `C:\Users\HP\Desktop\UNI\final work\src\training\evaluation.py`
+- `src/training/evaluation.py`
   - Metrics, repeated-run summaries, confidence intervals, result export helpers
-- `C:\Users\HP\Desktop\UNI\final work\src\training\sequence.py`
+- `src/training/sequence.py`
   - Window-building helpers for LSTM/Transformer models
-- `C:\Users\HP\Desktop\UNI\final work\src\train_xgboost_48h.py`
+- `src/train_xgboost_48h.py`
   - Main strong tabular benchmark and lag-ablation anchor model
-- `C:\Users\HP\Desktop\UNI\final work\src\train_knn_48h.py`
+- `src/train_knn_48h.py`
   - Lightweight distance-based comparison
-- `C:\Users\HP\Desktop\UNI\final work\src\train_arima_48h.py`
+- `src/train_arima_48h.py`
   - Statistical baseline
-- `C:\Users\HP\Desktop\UNI\final work\src\train_prophet_48h.py`
+- `src/train_prophet_48h.py`
   - Trend/seasonality baseline
-- `C:\Users\HP\Desktop\UNI\final work\src\train_lstm_48h.py`
+- `src/train_lstm_48h.py`
   - Sequence deep-learning benchmark
-- `C:\Users\HP\Desktop\UNI\final work\src\train_transformer_48h.py`
+- `src/train_transformer_48h.py`
   - Transformer benchmark
-- `C:\Users\HP\Desktop\UNI\final work\src\train_stacking_48h.py`
+- `src/train_stacking_48h.py`
   - Ensemble layer once base models are methodologically aligned
-- `C:\Users\HP\Desktop\UNI\final work\src\summarize_training_results.py`
+- `src/summarize_training_results.py`
   - Aggregate final outputs into comparison tables
-- `C:\Users\HP\Desktop\UNI\final work\tests\`
+- `tests/`
   - Validation tests for data building, feature logic, and evaluation utilities
-- `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- `logs/project_work_log.md`
   - Step-by-step progress log for the new project
-- `C:\Users\HP\Desktop\UNI\final work\docs\superpowers\specs\`
+- `docs/superpowers/specs/`
   - Research-direction specs
-- `C:\Users\HP\Desktop\UNI\final work\docs\superpowers\plans\`
+- `docs/superpowers/plans/`
   - Execution plans
 
 ### Task 1: Workspace setup and documentation baseline
 
 **Files:**
-- Create: `C:\Users\HP\Desktop\UNI\final work\docs\superpowers\specs\2026-05-06-ismn-lag-design.md`
-- Create: `C:\Users\HP\Desktop\UNI\final work\docs\superpowers\plans\2026-05-06-ismn-lag-design-implementation.md`
-- Create: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create: `docs/superpowers/specs/2026-05-06-ismn-lag-design.md`
+- Create: `docs/superpowers/plans/2026-05-06-ismn-lag-design-implementation.md`
+- Create: `logs/project_work_log.md`
 
 - [ ] Confirm that new work will live only outside `old/`.
 - [ ] Write the research-direction spec for the multi-scale lag design.
@@ -67,9 +67,9 @@
 ### Task 2: Rebuild the merged hourly dataset from raw data
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\build_ismn_merged.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\ismn\merge_summary.json`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/build_ismn_merged.py`
+- Create or modify: `outputs/ismn/merge_summary.json`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Inspect the raw ISMN data under `data\original dataset\`.
 - [ ] Reconfirm the quality-control rule for accepted observations.
@@ -83,9 +83,9 @@
 ### Task 3: Build the new 48-hour forecasting dataset
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\build_ismn_forecasting_dataset.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\ismn\final_dataset_summary.json`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/build_ismn_forecasting_dataset.py`
+- Create or modify: `outputs/ismn/final_dataset_summary.json`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Load `data\processed\ismn_merged_hourly.csv`.
 - [ ] Consolidate precipitation into one modeling column using a fixed station-safe priority rule.
@@ -103,9 +103,9 @@
 ### Task 4: Lock the lag-ablation experiment design
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\training\feature_sets.py`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\src\training\config.py`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/training/feature_sets.py`
+- Modify: `src/training/config.py`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Define named feature groups for ablation.
 - [ ] Create at least these experiment sets:
@@ -120,12 +120,12 @@
 ### Task 5: Build the shared training and evaluation utilities
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\training\config.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\training\data.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\training\evaluation.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\tests\test_training_utils.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\tests\test_evaluation_utils.py`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/training/config.py`
+- Create or modify: `src/training/data.py`
+- Create or modify: `src/training/evaluation.py`
+- Create or modify: `tests/test_training_utils.py`
+- Create or modify: `tests/test_evaluation_utils.py`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Implement reusable dataset loading and chronological split helpers.
 - [ ] Standardize train, validation, and test extraction across experiments.
@@ -137,9 +137,9 @@
 ### Task 6: Run the anchor lag-ablation model
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_xgboost_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\xgboost\`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/train_xgboost_48h.py`
+- Create or modify: `outputs/training/xgboost/`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Use XGBoost as the main anchor model for lag-ablation experiments.
 - [ ] Run the limited-lag setup and save predictions and metrics.
@@ -152,14 +152,14 @@
 ### Task 7: Train the core comparison models
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_knn_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_lstm_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_transformer_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\training\sequence.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\knn\`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\lstm\`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\transformer\`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/train_knn_48h.py`
+- Create or modify: `src/train_lstm_48h.py`
+- Create or modify: `src/train_transformer_48h.py`
+- Create or modify: `src/training/sequence.py`
+- Create or modify: `outputs/training/knn/`
+- Create or modify: `outputs/training/lstm/`
+- Create or modify: `outputs/training/transformer/`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Train KNN as a lightweight nonparametric benchmark.
 - [ ] Build sequence windows for the LSTM and Transformer pipelines.
@@ -171,12 +171,12 @@
 ### Task 8: Train the statistical baselines carefully
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_arima_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_prophet_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\arima\`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\prophet\`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\tests\test_arima_utils.py`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/train_arima_48h.py`
+- Create or modify: `src/train_prophet_48h.py`
+- Create or modify: `outputs/training/arima/`
+- Create or modify: `outputs/training/prophet/`
+- Create or modify: `tests/test_arima_utils.py`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Implement ARIMA on a methodologically valid observable source series.
 - [ ] Implement Prophet on a methodologically valid observable source series.
@@ -188,10 +188,10 @@
 ### Task 9: Build stacking only after base-model alignment
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\train_stacking_48h.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\stacking\`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\stacking_variants\`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/train_stacking_48h.py`
+- Create or modify: `outputs/training/stacking/`
+- Create or modify: `outputs/training/stacking_variants/`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Decide which base models are eligible for stacking based on aligned predictions.
 - [ ] Build the first stacker on a common comparable evaluation subset only.
@@ -202,9 +202,9 @@
 ### Task 10: Summarize results and build final comparison artifacts
 
 **Files:**
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\src\summarize_training_results.py`
-- Create or modify: `C:\Users\HP\Desktop\UNI\final work\outputs\training\model_comparison_summary.csv`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Create or modify: `src/summarize_training_results.py`
+- Create or modify: `outputs/training/model_comparison_summary.csv`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Read all saved model summaries from the outputs directory.
 - [ ] Build one comparison table using only methodologically compatible runs.
@@ -215,9 +215,9 @@
 ### Task 11: Turn experiment outcomes into report-ready research framing
 
 **Files:**
-- Modify: `C:\Users\HP\Desktop\UNI\final work\docs\superpowers\specs\2026-05-06-ismn-lag-design.md`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\summary.docx`
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Modify: `docs/superpowers/specs/2026-05-06-ismn-lag-design.md`
+- Modify: `summary.docx`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Review whether the results actually support the planned novelty statement.
 - [ ] Refine the research gap based on experimental evidence.
@@ -228,7 +228,7 @@
 ### Task 12: Final verification and cleanup
 
 **Files:**
-- Modify: `C:\Users\HP\Desktop\UNI\final work\logs\project_work_log.md`
+- Modify: `logs/project_work_log.md`
 
 - [ ] Re-run validation commands for core scripts and tests.
 - [ ] Recheck that outputs, logs, and summaries match the latest runs.

@@ -7,6 +7,8 @@ import pandas as pd
 
 from src.training.evaluation import compute_metrics, save_run_outputs, summarize_run_metrics
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+
 
 class TestEvaluationUtils(unittest.TestCase):
     def test_compute_metrics_returns_expected_keys(self):
@@ -39,7 +41,7 @@ class TestEvaluationUtils(unittest.TestCase):
         self.assertGreater(rmse_row["ci95"], 0.0)
 
     def test_save_run_outputs_writes_expected_artifacts(self):
-        output_dir = Path("C:/Users/HP/Desktop/UNI/final work/tests/runtime/eval_outputs")
+        output_dir = RUNTIME_DIR / "eval_outputs"
         if output_dir.exists():
             for child in output_dir.iterdir():
                 child.unlink()

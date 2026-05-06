@@ -11,6 +11,8 @@ from src.build_ismn_merged import (
     summarize_merged_dataset,
 )
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+
 
 class TestBuildIsmnMerged(unittest.TestCase):
     def test_parse_file_metadata_builds_expected_feature_names(self):
@@ -46,9 +48,7 @@ class TestBuildIsmnMerged(unittest.TestCase):
             ]
         )
 
-        file_path = Path(
-            "C:/Users/HP/Desktop/UNI/final work/tests/runtime/TERENO_TERENO_TestStation_sm_0.050000_0.050000_Test-Sensor_1_1_20091208_20260505.stm"
-        )
+        file_path = RUNTIME_DIR / "TERENO_TERENO_TestStation_sm_0.050000_0.050000_Test-Sensor_1_1_20091208_20260505.stm"
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
