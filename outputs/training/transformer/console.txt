@@ -1,0 +1,79 @@
+(soil48) PS C:\Users\HP\Desktop\UNI\final work> python src\train_transformer_48h.py
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777989292.246480   25100 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777989294.966090   25100 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+TensorFlow devices | CPU: 1 | GPU: 0
+GPU unavailable. Running CPU-only.
+I0000 00:00:1777989445.833157   25100 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 160ms/step - loss: 1.1699 - val_loss: 0.0889
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 32s 165ms/step - loss: 0.0365 - val_loss: 0.0144
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 167ms/step - loss: 0.0161 - val_loss: 0.0103
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 30s 153ms/step - loss: 0.0139 - val_loss: 0.0087
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 30s 152ms/step - loss: 0.0129 - val_loss: 0.0068
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 30s 152ms/step - loss: 0.0105 - val_loss: 0.0063
+Epoch 7/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 30s 153ms/step - loss: 0.0095 - val_loss: 0.0068
+Epoch 8/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 30s 153ms/step - loss: 0.0083 - val_loss: 0.0069
+Epoch 9/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 171ms/step - loss: 0.0085 - val_loss: 0.0067
+Epoch 10/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 32s 164ms/step - loss: 0.0081 - val_loss: 0.0067
+Epoch 11/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 673s 3s/step - loss: 0.0080 - val_loss: 0.0063
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 32s 158ms/step - loss: 3.7764 - val_loss: 0.0608
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 35s 180ms/step - loss: 0.2070 - val_loss: 0.0206
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 171ms/step - loss: 0.0532 - val_loss: 0.0145
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 34s 173ms/step - loss: 0.0279 - val_loss: 0.0068
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 170ms/step - loss: 0.0244 - val_loss: 0.0084
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 169ms/step - loss: 0.0217 - val_loss: 0.0071
+Epoch 7/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 35s 182ms/step - loss: 0.0189 - val_loss: 0.0077
+Epoch 8/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 35s 178ms/step - loss: 0.0192 - val_loss: 0.0061
+Epoch 9/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 167ms/step - loss: 0.0165 - val_loss: 0.0076
+Epoch 10/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 35s 181ms/step - loss: 0.0151 - val_loss: 0.0067
+Epoch 11/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 34s 172ms/step - loss: 0.0150 - val_loss: 0.0075
+Epoch 12/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 167ms/step - loss: 0.0159 - val_loss: 0.0062
+Epoch 13/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 32s 166ms/step - loss: 0.0193 - val_loss: 0.0071
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 38s 175ms/step - loss: 3.7443 - val_loss: 0.0521
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 168ms/step - loss: 0.0708 - val_loss: 0.0134
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 167ms/step - loss: 0.0210 - val_loss: 0.0087
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 36s 184ms/step - loss: 0.0204 - val_loss: 0.0093
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 169ms/step - loss: 0.0219 - val_loss: 0.0063
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 36s 183ms/step - loss: 0.0189 - val_loss: 0.0077
+Epoch 7/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 36s 183ms/step - loss: 0.0143 - val_loss: 0.0072
+Epoch 8/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 169ms/step - loss: 0.0110 - val_loss: 0.0072
+Epoch 9/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 35s 178ms/step - loss: 0.0099 - val_loss: 0.0071
+Epoch 10/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 33s 171ms/step - loss: 0.0101 - val_loss: 0.0071
+C:\Users\HP\Desktop\UNI\final work\outputs\training\transformer

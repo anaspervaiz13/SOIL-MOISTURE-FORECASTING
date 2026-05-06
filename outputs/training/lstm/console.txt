@@ -1,0 +1,47 @@
+(soil48) PS C:\Users\HP\Desktop\UNI\final work> python src\train_lstm_48h.py
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777985290.929207   30716 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777985296.632860   30716 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+TensorFlow devices | CPU: 1 | GPU: 0
+GPU unavailable. Running CPU-only.
+I0000 00:00:1777985690.220276   30716 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 220s 1s/step - loss: 0.0134 - val_loss: 0.0037
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 130s 668ms/step - loss: 0.0078 - val_loss: 0.0056
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 150s 764ms/step - loss: 0.0073 - val_loss: 0.0067
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 172s 885ms/step - loss: 0.0071 - val_loss: 0.0073
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 280s 1s/step - loss: 0.0070 - val_loss: 0.0075
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 238s 1s/step - loss: 0.0070 - val_loss: 0.0077
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 129s 646ms/step - loss: 0.0143 - val_loss: 0.0034
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 126s 646ms/step - loss: 0.0075 - val_loss: 0.0042
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 1222s 6s/step - loss: 0.0070 - val_loss: 0.0052
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 225s 1s/step - loss: 0.0068 - val_loss: 0.0060
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 125s 636ms/step - loss: 0.0067 - val_loss: 0.0065
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 74s 378ms/step - loss: 0.0066 - val_loss: 0.0069
+Epoch 1/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 85s 406ms/step - loss: 0.0135 - val_loss: 0.0037
+Epoch 2/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 73s 376ms/step - loss: 0.0076 - val_loss: 0.0047
+Epoch 3/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 41s 210ms/step - loss: 0.0071 - val_loss: 0.0057
+Epoch 4/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 50s 256ms/step - loss: 0.0069 - val_loss: 0.0065
+Epoch 5/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 72s 368ms/step - loss: 0.0068 - val_loss: 0.0070
+Epoch 6/40
+195/195 ━━━━━━━━━━━━━━━━━━━━ 62s 316ms/step - loss: 0.0068 - val_loss: 0.0072
+C:\Users\HP\Desktop\UNI\final work\outputs\training\lstm

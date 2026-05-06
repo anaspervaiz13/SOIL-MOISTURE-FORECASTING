@@ -1,0 +1,23 @@
+{
+  "model": "transformer",
+  "lookback": 168,
+  "sequence_features": [
+    "sm_0.05m",
+    "sm_0.20m",
+    "sm_0.50m",
+    "ta_2.00m",
+    "ts_0.05m",
+    "ts_0.20m",
+    "ts_0.50m",
+    "precipitation",
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos"
+  ],
+  "seeds": [
+    42,
+    52,
+    62
+  ]
+}

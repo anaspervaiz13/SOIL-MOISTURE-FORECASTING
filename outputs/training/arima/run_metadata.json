@@ -1,0 +1,17 @@
+{
+  "model": "arima",
+  "order": [
+    3,
+    0,
+    1
+  ],
+  "seasonal_order": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "skipped_stations": [
+    "Selhausen"
+  ]
+}

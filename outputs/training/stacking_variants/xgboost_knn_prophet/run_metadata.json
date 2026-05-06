@@ -1,0 +1,18 @@
+{
+  "model": "stacking",
+  "base_models": [
+    "xgboost",
+    "knn",
+    "prophet"
+  ],
+  "alpha": 1.0,
+  "aligned_rows": {
+    "val": 9370,
+    "test": 8523
+  },
+  "stations_covered": [
+    "Gevenich",
+    "Merzenhausen",
+    "Selhausen"
+  ]
+}

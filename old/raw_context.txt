@@ -1,0 +1,725 @@
+
+Good — THIS is exactly the kind of pushback you should be giving. Let’s evaluate it properly, not emotionally.
+
+🧠 Short answer (honest)
+👉 Yes — it’s a real journal
+👉 No — it’s NOT top-tier
+👉 But it’s acceptable for your assignment
+
+📄 The journal
+BAREKENG: Journal of Mathematics and Its Application
+✅ What’s GOOD about it
+Has DOI (Crossref registered) 
+
+Indexed in:
+
+Scopus (regional indexing) 
+
+Peer-reviewed (university journal)
+
+Published regularly (quarterly) 
+
+👉 So:
+
+✔ It’s NOT fake
+✔ It’s NOT predatory
+
+⚠️ What’s NOT great
+Not high-impact (like:
+
+Remote Sensing
+
+IEEE
+
+Elsevier journals)
+
+Regional journal (Indonesia-based) 
+
+Limited citation influence
+
+👉 Translation:
+
+It’s mid-tier / lower-tier academic journal
+
+🧠 What this means for YOU
+For your assignment:
+👉 ✅ Perfectly fine
+
+You’re doing MS coursework, not publishing in Nature
+
+What matters:
+
+Method clarity
+
+Implementation
+
+For a thesis / publication:
+👉 ⚠️ Not ideal as main reference
+
+⚖️ Real comparison (so you understand level)
+Journal Type	Example	Level
+Top-tier	IEEE, Elsevier	🔥🔥🔥
+Mid-tier	MDPI (Remote Sensing)	🔥🔥
+This journal	Barekeng	🔥
+🧠 FINAL DECISION (NO CONFUSION)
+👉 Use this paper if:
+
+You want:
+
+clean univariate LSTM reference
+
+dataset alignment
+
+You care about:
+
+implementation clarity > prestige
+
+👉 Don’t use it if:
+
+You want:
+
+“fancy” citations
+
+high-impact references
+
+🔥 What I recommend (best strategy)
+Use BOTH:
+🥇 Main (implementation fit):
+Batlajery (this paper)
+
+🥈 Support (strong credibility):
+Granata et al. (stacking, better journal)
+
+🧠 Final honest verdict
+✔ Technically solid
+✔ Fits your dataset perfectly
+❗ Not prestigious — but good enough
+
+🚀 If you want the perfect combo
+I can find you:
+
+one high-impact paper (for credibility)
+
+this one (for implementation)
+
+So you get:
+
+🔥 strong + practical
+
+Just say 👍
+
+
+bro tell me
+
+
+i said this last time to my professor
+
+ Assignment No 3
+Research Project 4: Problem
+Statement, Research Gap and
+Methodology
+Group Members:
+Rayyan Ahmed Minhas – 25i-7611
+Anas Pervaiz – 25i-7613
+Soil Moisture Modelling for IOT Sensors by Implementation of Stacked Ensemble
+Modelling
+Problem Statement:
+Existing soil moisture prediction models often suffer from high computational complexity and
+limited ability to capture temporal patterns. Many models fail to combine the strengths of
+different algorithms in a lightweight and interpretable framework, which limits their usefulness
+for real time agricultural decision making.
+Gap:
+• Many studies have applied machine learning and ensemble learning techniques to soil
+moisture modelling, but none have employed stacked ensemble modelling in this
+specific scenario.
+• The other major problem that shows itself in these problems is that multiple models of
+different computation capacities are used, which leads to model redundancy. There is a
+need for a lightweight ensemble framework that can accurately predict the soil
+conditions without creating a computationally heavy framework.
+• Another limitation is the use of only two features in the loss function of the CNN or
+LSTM models, which reduces the scope or the capability of the framework.
+Research objectives:
+• Develop a lightweight stacked ensemble model using LSTM, XGBoost, and KNN for
+accurate soil moisture prediction.
+• Create a temporal feature pipeline using multi-lag environmental variables such as
+rainfall, temperature, and humidity.
+• Use a linear regression meta learner to combine the predictions of base models
+efficiently.
+• Apply SHAP (Shapley Additive Explanations) to improve model interpretability.
+• Evaluate the model for 48 to 72 hour soil moisture forecasting to support agricultural
+decision making.
+Proposed Methodology:
+
+Proposed Methodology:
+
+Multi-Source loT Data
+
+Feature Engineering
+(Min-Max Scaling + Temporal
+Lagging: $t-1, t-2$)
+
+Base Learner A:
+LSTM (Time-Series
+Expert)
+
+Base Learner B:
+XGBoost (Non-Linear
+Expert)
+
+Base Learner C: KNN
+(Local Correlation
+Expert)
+
+Level-1 Meta-Learner (Linear
+Regressor Stacking Layer)
+
+Explainable Al (SHAP Interpreter for
+Local/Global Transparency)
+
+Final Soil Moisture
+Prediction + RMSE / R2
+Evaluation
+
+
+
+now tell me do i need a baseline paper even?
+
+or just start working idk
+
+Alright — straight answer, no fluff:
+
+❗ You DO need a baseline paper
+…but not in the way you’re thinking.
+
+🧠 What “baseline paper” actually means (for your assignment)
+It does NOT mean:
+
+“I must perfectly reproduce one paper”
+
+It means:
+
+“I must show my method is better than something standard from literature”
+
+📌 In your case
+Your proposal already defines:
+
+Your method:
+Stacked model (LSTM + XGBoost + KNN)
+
+👉 So you need something to compare against
+
+⚖️ What can act as your baseline?
+You have 3 valid options:
+
+🥇 BEST OPTION (what you should do)
+👉 Use models as baseline, NOT a full paper
+
+Baselines:
+LSTM alone
+
+XGBoost alone
+
+KNN alone
+
+Then compare with:
+
+Stacked model (your method)
+
+Why this is enough:
+Clean
+
+Easy
+
+Matches your implementation
+
+Professors like it
+
+🥈 OPTIONAL (adds strength)
+Use:
+
+A Stacked Machine Learning Algorithm for Multi-Step Ahead Prediction of Soil Moisture
+👉 Use it to say:
+
+“Stacking has been used before…”
+
+NOT:
+
+“I reproduce this paper”
+
+🥉 NOT needed (don’t waste time)
+Perfect dataset-matching paper ❌
+
+Exact replication ❌
+
+Complex multi-source papers ❌
+
+⚠️ Bigger issue (you NEED to fix this)
+Your proposal says:
+
+“multi-source IoT data + rainfall, temperature, humidity”
+
+👉 But your dataset:
+
+❌ DOES NOT HAVE THIS
+
+🧠 So you MUST adjust your story
+Change this:
+❌
+
+multi-source IoT data
+
+To this:
+✅
+
+“time-series soil moisture data with lag-based feature engineering”
+
+And this:
+❌
+
+rainfall, temperature, humidity
+
+To this:
+✅
+
+lag features (t-1, t-3, t-7, etc.)
+
+🔥 Final structure you should follow
+Baseline:
+LSTM
+
+XGBoost
+
+KNN
+
+Proposed:
+Stacked Ensemble (LSTM + XGB + KNN)
+
+Comparison:
+Model	RMSE	R²
+LSTM		
+XGBoost		
+KNN		
+Stacked (yours)	⭐	⭐
+🧠 Final answer to your question
+👉 YES you need a baseline
+👉 BUT:
+
+Your baseline = individual models, not a paper
+
+🚀 What you should do RIGHT NOW
+Fix your methodology wording
+
+Start preprocessing SoMo.ml
+
+Train:
+
+XGBoost first
+
+Then LSTM
+
+Then stacking
+
+🏁 One-line truth
+You don’t need a perfect paper — you need a clean comparison.
+
+If you want, I can:
+
+rewrite your methodology to match your dataset perfectly
+
+or give you step-by-step coding plan (day-wise)
+
+Just say 👍
+
+
+okay give me step by step coding plan, from processing my data to implementing my methodology
+
+Thought for a few seconds
+Below is the exact coding plan you should follow.
+
+Final project setup
+Dataset: SoMo.ml-EU Layer 1
+Target: soil moisture forecasting
+Input features: lagged soil moisture values only
+Models: LSTM, XGBoost, KNN
+Final model: stacked ensemble using Linear Regression meta-learner
+Metrics: RMSE, MAE, R²
+
+Step 1 — Set up project folders
+soil_moisture_project/
+│
+├── data/
+│   └── raw/
+│       └── somo_ml_eu.nc
+│
+├── notebooks/
+│   └── 01_experiments.ipynb
+│
+├── outputs/
+│   ├── plots/
+│   └── results/
+│
+└── src/
+    ├── preprocessing.py
+    ├── models.py
+    └── evaluation.py
+Step 2 — Install libraries
+pip install xarray netCDF4 pandas numpy matplotlib scikit-learn xgboost tensorflow shap
+Step 3 — Load NetCDF dataset
+import xarray as xr
+
+ds = xr.open_dataset("data/raw/somo_ml_eu.nc")
+print(ds)
+First inspect:
+
+print(ds.data_vars)
+print(ds.coords)
+You need to identify:
+
+time
+lat
+lon
+soil moisture variable name
+depth/layer if available
+Step 4 — Select one location and one depth
+Start with one grid point only. Do not use the full 2.2 GB grid initially.
+
+lat_value = 50.0
+lon_value = 10.0
+
+point = ds.sel(lat=lat_value, lon=lon_value, method="nearest")
+print(point)
+If there are layers/depths:
+
+point = point.isel(layer=0)   # 0–10 cm layer
+Then convert:
+
+df = point.to_dataframe().reset_index()
+print(df.head())
+Keep only time and soil moisture:
+
+df = df[["time", "soil_moisture"]]
+df = df.dropna()
+df = df.sort_values("time")
+Replace "soil_moisture" with the actual variable name from your file.
+
+Step 5 — Plot raw time series
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12, 4))
+plt.plot(df["time"], df["soil_moisture"])
+plt.xlabel("Time")
+plt.ylabel("Soil Moisture")
+plt.title("SoMo.ml Soil Moisture Time Series")
+plt.show()
+This plot is important for your report.
+
+Step 6 — Create lag features
+For daily data, use:
+
+lags = [1, 2, 3, 7, 14, 30]
+
+for lag in lags:
+    df[f"lag_{lag}"] = df["soil_moisture"].shift(lag)
+Add rolling features:
+
+df["rolling_mean_7"] = df["soil_moisture"].rolling(7).mean()
+df["rolling_std_7"] = df["soil_moisture"].rolling(7).std()
+df["rolling_mean_14"] = df["soil_moisture"].rolling(14).mean()
+Step 7 — Create forecasting targets
+Since SoMo.ml is daily, your 48–72 hour target becomes:
+
+48 hours = 2 days ahead
+72 hours = 3 days ahead
+Create both:
+
+df["target_2day"] = df["soil_moisture"].shift(-2)
+df["target_3day"] = df["soil_moisture"].shift(-3)
+
+df = df.dropna()
+For first experiment, use only one:
+
+target_col = "target_3day"
+Step 8 — Train / validation / test split
+Use time-based split.
+
+train_df = df[df["time"] < "2016-01-01"]
+val_df = df[(df["time"] >= "2016-01-01") & (df["time"] < "2018-01-01")]
+test_df = df[df["time"] >= "2018-01-01"]
+Step 9 — Prepare tabular features for XGBoost and KNN
+feature_cols = [
+    "lag_1", "lag_2", "lag_3", "lag_7", "lag_14", "lag_30",
+    "rolling_mean_7", "rolling_std_7", "rolling_mean_14"
+]
+
+X_train = train_df[feature_cols]
+y_train = train_df[target_col]
+
+X_val = val_df[feature_cols]
+y_val = val_df[target_col]
+
+X_test = test_df[feature_cols]
+y_test = test_df[target_col]
+Normalize for KNN:
+
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_val_scaled = scaler.transform(X_val)
+X_test_scaled = scaler.transform(X_test)
+Step 10 — Train XGBoost baseline
+from xgboost import XGBRegressor
+
+xgb = XGBRegressor(
+    n_estimators=300,
+    learning_rate=0.03,
+    max_depth=4,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42
+)
+
+xgb.fit(X_train, y_train)
+
+xgb_val_pred = xgb.predict(X_val)
+xgb_test_pred = xgb.predict(X_test)
+Step 11 — Train KNN baseline
+from sklearn.neighbors import KNeighborsRegressor
+
+knn = KNeighborsRegressor(n_neighbors=5)
+knn.fit(X_train_scaled, y_train)
+
+knn_val_pred = knn.predict(X_val_scaled)
+knn_test_pred = knn.predict(X_test_scaled)
+Step 12 — Prepare LSTM sequences
+Use past 30 days to predict 3 days ahead.
+
+import numpy as np
+
+def create_sequences(series, lookback=30, horizon=3):
+    X, y = [], []
+    values = series.values
+    
+    for i in range(len(values) - lookback - horizon + 1):
+        X.append(values[i:i+lookback])
+        y.append(values[i+lookback+horizon-1])
+    
+    return np.array(X), np.array(y)
+Create splits separately:
+
+lookback = 30
+horizon = 3
+
+train_series = train_df["soil_moisture"]
+val_series = val_df["soil_moisture"]
+test_series = test_df["soil_moisture"]
+
+X_lstm_train, y_lstm_train = create_sequences(train_series, lookback, horizon)
+X_lstm_val, y_lstm_val = create_sequences(val_series, lookback, horizon)
+X_lstm_test, y_lstm_test = create_sequences(test_series, lookback, horizon)
+Reshape:
+
+X_lstm_train = X_lstm_train.reshape(-1, lookback, 1)
+X_lstm_val = X_lstm_val.reshape(-1, lookback, 1)
+X_lstm_test = X_lstm_test.reshape(-1, lookback, 1)
+Step 13 — Train LSTM
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
+
+lstm = Sequential([
+    LSTM(64, return_sequences=True, input_shape=(lookback, 1)),
+    Dropout(0.2),
+    LSTM(32),
+    Dropout(0.2),
+    Dense(1)
+])
+
+lstm.compile(
+    optimizer=Adam(learning_rate=0.001),
+    loss="mse"
+)
+
+history = lstm.fit(
+    X_lstm_train, y_lstm_train,
+    validation_data=(X_lstm_val, y_lstm_val),
+    epochs=100,
+    batch_size=32,
+    callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
+    verbose=1
+)
+Predictions:
+
+lstm_val_pred = lstm.predict(X_lstm_val).flatten()
+lstm_test_pred = lstm.predict(X_lstm_test).flatten()
+Step 14 — Align predictions for stacking
+Because LSTM loses first 30 rows, align XGBoost/KNN validation and test predictions.
+
+xgb_val_pred_aligned = xgb_val_pred[-len(lstm_val_pred):]
+knn_val_pred_aligned = knn_val_pred[-len(lstm_val_pred):]
+y_val_aligned = y_lstm_val
+
+xgb_test_pred_aligned = xgb_test_pred[-len(lstm_test_pred):]
+knn_test_pred_aligned = knn_test_pred[-len(lstm_test_pred):]
+y_test_aligned = y_lstm_test
+Step 15 — Train stacked ensemble meta-learner
+from sklearn.linear_model import LinearRegression
+
+stack_X_val = np.column_stack([
+    lstm_val_pred,
+    xgb_val_pred_aligned,
+    knn_val_pred_aligned
+])
+
+stack_X_test = np.column_stack([
+    lstm_test_pred,
+    xgb_test_pred_aligned,
+    knn_test_pred_aligned
+])
+
+meta = LinearRegression()
+meta.fit(stack_X_val, y_val_aligned)
+
+stack_test_pred = meta.predict(stack_X_test)
+This is your proposed model.
+
+Step 16 — Evaluation function
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import numpy as np
+
+def evaluate(y_true, y_pred, model_name):
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    
+    return {
+        "Model": model_name,
+        "RMSE": rmse,
+        "MAE": mae,
+        "R2": r2
+    }
+Evaluate:
+
+results = []
+
+results.append(evaluate(y_test_aligned, lstm_test_pred, "LSTM"))
+results.append(evaluate(y_test_aligned, xgb_test_pred_aligned, "XGBoost"))
+results.append(evaluate(y_test_aligned, knn_test_pred_aligned, "KNN"))
+results.append(evaluate(y_test_aligned, stack_test_pred, "Stacked Ensemble"))
+
+import pandas as pd
+results_df = pd.DataFrame(results)
+print(results_df)
+Step 17 — Save results table
+results_df.to_csv("outputs/results/model_comparison.csv", index=False)
+Step 18 — Plot actual vs predicted
+plt.figure(figsize=(12, 4))
+plt.plot(y_test_aligned[:200], label="Actual")
+plt.plot(stack_test_pred[:200], label="Stacked Prediction")
+plt.legend()
+plt.title("Actual vs Predicted Soil Moisture")
+plt.xlabel("Test Samples")
+plt.ylabel("Soil Moisture")
+plt.show()
+Step 19 — Plot model comparison
+plt.figure(figsize=(8, 4))
+plt.bar(results_df["Model"], results_df["RMSE"])
+plt.ylabel("RMSE")
+plt.title("Model RMSE Comparison")
+plt.xticks(rotation=30)
+plt.show()
+Step 20 — Plot LSTM loss curve
+plt.figure(figsize=(8, 4))
+plt.plot(history.history["loss"], label="Training Loss")
+plt.plot(history.history["val_loss"], label="Validation Loss")
+plt.legend()
+plt.xlabel("Epoch")
+plt.ylabel("MSE Loss")
+plt.title("LSTM Training and Validation Loss")
+plt.show()
+Step 21 — SHAP for XGBoost
+Do SHAP only for XGBoost. Do not try to explain the LSTM deeply.
+
+import shap
+
+explainer = shap.TreeExplainer(xgb)
+shap_values = explainer.shap_values(X_test)
+
+shap.summary_plot(shap_values, X_test)
+In your report, say:
+
+SHAP was applied to the XGBoost base learner to interpret the contribution of lag-based soil moisture features.
+
+Step 22 — Ablation study
+You need at least 3 ablations:
+
+Ablation 1: XGBoost only
+Ablation 2: LSTM only
+Ablation 3: LSTM + XGBoost stack
+Ablation 4: LSTM + XGBoost + KNN stack
+Make table:
+
+Model Variant                  RMSE     MAE     R²
+LSTM only
+XGBoost only
+KNN only
+LSTM + XGBoost
+LSTM + XGBoost + KNN
+Step 23 — Final report structure
+Use this order:
+
+1. Introduction
+2. Problem Statement
+3. Dataset Description
+4. Preprocessing
+5. Feature Engineering
+6. Baseline Models
+7. Proposed Stacked Ensemble
+8. Evaluation Metrics
+9. Results
+10. Ablation Study
+11. SHAP Interpretability
+12. Discussion
+13. Limitations
+14. Conclusion
+Step 24 — What to say about dataset mismatch
+Since your previous proposal said IoT/weather, write this:
+
+Due to public dataset availability constraints, this implementation uses the SoMo.ml-EU dataset, a gridded soil moisture product trained from in-situ measurements. Since meteorological variables are not directly included in the selected dataset, the implementation focuses on lag-based temporal soil moisture forecasting rather than multi-source environmental fusion.
+
+That protects you.
+
+Step 25 — What to implement first
+Do not start with LSTM.
+
+Your order should be:
+
+Day 1: Load NetCDF + extract one location
+Day 2: Create lag features + XGBoost baseline
+Day 3: Add KNN + evaluation table
+Day 4: Add LSTM
+Day 5: Add stacking
+Day 6: Add plots + SHAP
+Day 7: Write results and discussion
+Final locked methodology:
+
+SoMo.ml-EU soil moisture time series
+        ↓
+Select 0–10 cm layer and one location
+        ↓
+Create lag and rolling temporal features
+        ↓
+Train base learners:
+    - LSTM
+    - XGBoost
+    - KNN
+        ↓
+Combine predictions using Linear Regression
+        ↓
+Evaluate RMSE, MAE, R²
+        ↓
+Explain XGBoost features using SHAP
+
+
