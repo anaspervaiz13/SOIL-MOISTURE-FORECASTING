@@ -1,0 +1,4 @@
+{
+  "model": "xgboost",
+  "feature_group": "short_lags"
+}

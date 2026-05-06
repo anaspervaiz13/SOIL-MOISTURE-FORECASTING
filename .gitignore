@@ -1,6 +1,2 @@
-/data/ismn
-/data/processed
-
-data\ismn
-data\processed
-
+# Dataset files
+data/

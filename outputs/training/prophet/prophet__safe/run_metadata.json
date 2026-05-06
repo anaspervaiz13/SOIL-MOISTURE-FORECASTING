@@ -1,0 +1,10 @@
+{
+  "model": "prophet",
+  "output_tag": "safe",
+  "changepoint_prior_scale": 0.05,
+  "seasonality_prior_scale": 10.0,
+  "target_column": "target_48h",
+  "target_source_column": "sm_0.05m",
+  "skipped_stations": [],
+  "skipped_reasons": {}
+}

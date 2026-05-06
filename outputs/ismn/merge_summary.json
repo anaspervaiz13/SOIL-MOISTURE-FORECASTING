@@ -1,34 +1,29 @@
 {
-  "raw_files_parsed": 65,
-  "observations_after_qc": 6095434,
-  "aggregated_observations": 3152668,
-  "merged_rows": 359585,
-  "merged_columns": 16,
+  "rows": 359585,
+  "columns": 16,
   "stations": [
     "Gevenich",
     "Merzenhausen",
     "Selhausen"
   ],
-  "columns": [
-    "station",
-    "timestamp",
-    "latitude",
-    "longitude",
-    "elevation",
-    "p_ecotech_rain_gauge",
-    "p_ott_pluvio2s_amount",
-    "p_ott_pluvio2s_volume",
-    "p_vaisala_wxt510",
-    "sm_0.05m",
-    "sm_0.20m",
-    "sm_0.50m",
-    "ta_2.00m",
-    "ts_0.05m",
-    "ts_0.20m",
-    "ts_0.50m"
-  ],
-  "time_range": {
-    "start": "2011-02-07 14:00:00",
-    "end": "2026-05-03 00:00:00"
+  "rows_per_station": {
+    "Gevenich": 120258,
+    "Merzenhausen": 130114,
+    "Selhausen": 109213
+  },
+  "time_start": "2011-02-07T14:00:00",
+  "time_end": "2026-05-03T00:00:00",
+  "missingness": {
+    "p_ecotech_rain_gauge": 0.026628,
+    "p_ott_pluvio2s_amount": 0.698408,
+    "p_ott_pluvio2s_volume": 0.698413,
+    "p_vaisala_wxt510": 0.017006,
+    "sm_0.05m": 0.124902,
+    "sm_0.20m": 0.110997,
+    "sm_0.50m": 0.116584,
+    "ta_2.00m": 0.087053,
+    "ts_0.05m": 0.119643,
+    "ts_0.20m": 0.116128,
+    "ts_0.50m": 0.116718
   }
 }

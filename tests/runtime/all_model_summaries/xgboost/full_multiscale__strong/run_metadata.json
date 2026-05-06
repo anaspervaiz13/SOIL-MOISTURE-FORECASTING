@@ -1,0 +1,1 @@
+{"model": "xgboost", "feature_group": "full_multiscale", "output_tag": "strong", "target_column": "target_48h", "target_source_column": "sm_0.05m"}

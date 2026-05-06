@@ -1,34 +1,110 @@
 from __future__ import annotations
 
-from .config import CALENDAR_FEATURES, CORE_BASE_FEATURES, DEPTH_FEATURES, LAG_HOURS, ROLL_WINDOWS, WEATHER_TEMP_FEATURES
+from fnmatch import fnmatch
 
-
-def _lag_features(var_names: list[str], lag_hours: list[int]) -> list[str]:
-    return [f"{var}_lag_{lag}h" for var in var_names for lag in lag_hours]
-
-
-def _roll_features() -> list[str]:
-    features: list[str] = []
-    for window in ROLL_WINDOWS:
-        features.append(f"sm_0.05m_roll_mean_{window}h")
-        features.append(f"sm_0.05m_roll_std_{window}h")
-        features.append(f"precipitation_roll_sum_{window}h")
-
-    for var in ["sm_0.20m", "sm_0.50m", "ta_2.00m", "ts_0.05m", "ts_0.20m", "ts_0.50m"]:
-        for window in [24, 48, 168]:
-            features.append(f"{var}_roll_mean_{window}h")
-    return features
+from .config import BASE_DYNAMIC_COLUMNS, CALENDAR_COLUMNS
 
 
 FEATURE_GROUPS = {
-    "surface_only": ["sm_0.05m"] + _lag_features(["sm_0.05m"], LAG_HOURS) + CALENDAR_FEATURES,
-    "surface_depth": ["sm_0.05m"] + DEPTH_FEATURES + _lag_features(["sm_0.05m", "sm_0.20m", "sm_0.50m"], LAG_HOURS) + CALENDAR_FEATURES,
-    "weather_depth_temporal": CORE_BASE_FEATURES + CALENDAR_FEATURES + _lag_features(CORE_BASE_FEATURES, LAG_HOURS) + _roll_features(),
+    "current_only": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [],
+    },
+    "baseline_limited": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_24h",
+            "sm_0.05m_roll_mean_24h",
+            "precipitation_roll_sum_24h",
+        ],
+    },
+    "short_lags": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_3h",
+            "*_lag_6h",
+            "*_lag_12h",
+            "*_lag_24h",
+            "*_roll_*_24h",
+        ],
+    },
+    "short_plus_medium": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_3h",
+            "*_lag_6h",
+            "*_lag_12h",
+            "*_lag_24h",
+            "*_lag_48h",
+            "*_lag_72h",
+            "*_roll_*_24h",
+            "*_roll_*_48h",
+        ],
+    },
+    "short_plus_weekly": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_3h",
+            "*_lag_6h",
+            "*_lag_12h",
+            "*_lag_24h",
+            "*_lag_168h",
+            "*_roll_*_24h",
+            "*_roll_*_168h",
+        ],
+    },
+    "full_multiscale_no_rolling": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_3h",
+            "*_lag_6h",
+            "*_lag_12h",
+            "*_lag_24h",
+            "*_lag_48h",
+            "*_lag_72h",
+            "*_lag_168h",
+        ],
+    },
+    "full_multiscale": {
+        "direct_columns": BASE_DYNAMIC_COLUMNS + CALENDAR_COLUMNS,
+        "patterns": [
+            "*_lag_1h",
+            "*_lag_3h",
+            "*_lag_6h",
+            "*_lag_12h",
+            "*_lag_24h",
+            "*_lag_48h",
+            "*_lag_72h",
+            "*_lag_168h",
+            "*_roll_*_6h",
+            "*_roll_*_24h",
+            "*_roll_*_48h",
+            "*_roll_*_168h",
+        ],
+    },
 }
 
 
-def get_feature_group(name: str) -> list[str]:
-    if name not in FEATURE_GROUPS:
-        valid = ", ".join(sorted(FEATURE_GROUPS))
-        raise ValueError(f"Unknown feature group '{name}'. Valid groups: {valid}")
-    return FEATURE_GROUPS[name]
+def get_feature_group_columns(all_columns: list[str], group_name: str) -> list[str]:
+    if group_name not in FEATURE_GROUPS:
+        raise KeyError(f"Unknown feature group: {group_name}")
+
+    definition = FEATURE_GROUPS[group_name]
+    selected = []
+
+    for column in definition["direct_columns"]:
+        if column in all_columns and column not in selected:
+            selected.append(column)
+
+    for pattern in definition["patterns"]:
+        matches = sorted(column for column in all_columns if fnmatch(column, pattern))
+        for column in matches:
+            if column not in selected:
+                selected.append(column)
+
+    return selected

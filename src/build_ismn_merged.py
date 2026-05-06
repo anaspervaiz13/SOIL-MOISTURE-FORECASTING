@@ -1,247 +1,225 @@
 from __future__ import annotations
 
 import json
-import os
-import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import re
 from pathlib import Path
 
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[1]
-RAW_DIR = ROOT / "data" / "ismn" / "TERENO"
-OUTPUT_DIR = ROOT / "data" / "processed"
-SUMMARY_DIR = ROOT / "outputs" / "ismn"
-LOG_PATH = ROOT / "logs" / "ismn_processing_log.md"
+FILENAME_PATTERN = re.compile(
+    r"^(?P<network>[^_]+)_(?P<subnetwork>[^_]+)_(?P<station>.+?)_"
+    r"(?P<variable>sm|ts|ta|p)_(?P<depth_from>-?\d+\.\d+)_(?P<depth_to>-?\d+\.\d+)_"
+    r"(?P<sensor>.+)_(?P<sensor_block>\d+)_(?P<replicate>\d+)_(?P<start>\d{8})_(?P<end>\d{8})\.stm$"
+)
 
-KEEP_VARIABLES = {"sm", "ts", "ta", "p"}
+STATIC_COLUMNS = ["station", "timestamp", "latitude", "longitude", "elevation"]
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+RAW_DATA_ROOT = WORKSPACE_ROOT / "data" / "original dataset"
+PROCESSED_DATA_DIR = WORKSPACE_ROOT / "data" / "processed"
+OUTPUTS_DIR = WORKSPACE_ROOT / "outputs" / "ismn"
+MERGED_OUTPUT_PATH = PROCESSED_DATA_DIR / "ismn_merged_hourly.csv"
+SUMMARY_OUTPUT_PATH = OUTPUTS_DIR / "merge_summary.json"
+METADATA_PATH = RAW_DATA_ROOT / "Metadata.json"
+ALLOWED_QUALITY_FLAG = "G"
+PREFERRED_FEATURE_ORDER = [
+    "p_ecotech_rain_gauge",
+    "p_ott_pluvio2s_amount",
+    "p_ott_pluvio2s_volume",
+    "p_vaisala_wxt510",
+    "sm_0.05m",
+    "sm_0.20m",
+    "sm_0.50m",
+    "ta_2.00m",
+    "ts_0.05m",
+    "ts_0.20m",
+    "ts_0.50m",
+]
 
 
-def parse_header(header_line: str) -> dict[str, object]:
-    parts = header_line.strip().split()
-    sensor = header_line.split("'")
-    sensor_name = sensor[1] if len(sensor) >= 3 else "unknown"
+def normalize_sensor_name(sensor: str) -> str:
+    cleaned = sensor.replace("'", "").strip().lower()
+    cleaned = cleaned.replace("-", "_").replace(" ", "_")
+    cleaned = re.sub(r"[^a-z0-9_]+", "_", cleaned)
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    return cleaned
+
+
+def format_depth_label(depth_value: float) -> str:
+    return f"{abs(depth_value):.2f}m"
+
+
+def build_feature_name(variable: str, sensor: str, depth_from: float) -> str:
+    if variable == "p":
+        return f"p_{normalize_sensor_name(sensor)}"
+    return f"{variable}_{format_depth_label(depth_from)}"
+
+
+def parse_file_metadata(file_path: Path) -> dict[str, object]:
+    match = FILENAME_PATTERN.match(file_path.name)
+    if not match:
+        raise ValueError(f"Unrecognized ISMN filename format: {file_path.name}")
+
+    metadata = match.groupdict()
+    depth_from = float(metadata["depth_from"])
+    sensor = metadata["sensor"]
+
     return {
-        "network": parts[0],
-        "network_abbr": parts[1],
-        "station": parts[2],
-        "latitude": float(parts[3]),
-        "longitude": float(parts[4]),
-        "elevation": float(parts[5]),
-        "depth_from_header": float(parts[6]),
-        "depth_to_header": float(parts[7]),
-        "sensor_name": sensor_name,
+        "network": metadata["network"],
+        "subnetwork": metadata["subnetwork"],
+        "station": metadata["station"],
+        "variable": metadata["variable"],
+        "depth_from": depth_from,
+        "depth_to": float(metadata["depth_to"]),
+        "sensor": sensor,
+        "feature_name": build_feature_name(metadata["variable"], sensor, depth_from),
     }
 
 
-def parse_filename(path: Path) -> dict[str, object]:
-    parts = path.stem.split("_")
-    return {
-        "network": parts[0],
-        "network_abbr": parts[1],
-        "station": parts[2],
-        "variable": parts[3],
-        "depth_from": float(parts[4]),
-        "depth_to": float(parts[5]),
-        "sensor_model": parts[6],
-        "sensor_group": parts[7],
-        "sensor_replicate": parts[8],
-        "date_start": parts[9],
-        "date_end": parts[10],
-    }
+def read_stm_file(file_path: Path, allowed_quality: str = "G") -> pd.DataFrame:
+    metadata = parse_file_metadata(file_path)
 
-
-def read_stm_file(path: Path) -> pd.DataFrame:
-    with path.open("r", encoding="utf-8", errors="ignore") as handle:
-        header_line = handle.readline().strip()
-
-    if not header_line:
-        return pd.DataFrame()
-
-    header_meta = parse_header(header_line)
-    file_meta = parse_filename(path)
-
-    df = pd.read_csv(
-        path,
+    frame = pd.read_csv(
+        file_path,
         sep=r"\s+",
         skiprows=1,
         header=None,
         names=["date", "time", "value", "quality_flag", "provider_flag"],
-        usecols=[0, 1, 2, 3, 4],
-        na_values=["nan", "NaN"],
-        keep_default_na=True,
         engine="python",
     )
-    if df.empty:
-        return df
 
-    df["timestamp"] = pd.to_datetime(
-        df["date"] + " " + df["time"],
-        format="%Y/%m/%d %H:%M",
-        errors="coerce",
-    )
-    df["value"] = pd.to_numeric(df["value"], errors="coerce").astype("float32")
-    df = df.drop(columns=["date", "time"])
+    frame = frame.loc[frame["quality_flag"] == allowed_quality].copy()
+    frame["timestamp"] = pd.to_datetime(frame["date"] + " " + frame["time"], format="%Y/%m/%d %H:%M")
+    frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
 
-    for key, value in {**header_meta, **file_meta}.items():
-        df[key] = value
-    df["source_file"] = path.name
-    df = df.dropna(subset=["timestamp", "value"])
-    df = df[df["quality_flag"] == "G"].copy()
-    return df
+    with file_path.open("r", encoding="utf-8") as handle:
+        header_parts = handle.readline().strip().split()
 
+    frame["station"] = metadata["station"]
+    frame["latitude"] = float(header_parts[3])
+    frame["longitude"] = float(header_parts[4])
+    frame["elevation"] = float(header_parts[5])
+    frame["feature_name"] = metadata["feature_name"]
 
-def column_name(variable: str, depth_from: float, sensor_name: str) -> str:
-    if variable in {"sm", "ts"}:
-        return f"{variable}_{depth_from:.2f}m"
-    if variable == "ta":
-        return f"{variable}_{abs(depth_from):.2f}m"
-    safe_sensor = sensor_name.lower().replace(" ", "_").replace("-", "_")
-    return f"p_{safe_sensor}"
-
-
-def append_log(text: str) -> None:
-    with LOG_PATH.open("a", encoding="utf-8") as handle:
-        handle.write(text)
+    return frame[
+        [
+            "station",
+            "timestamp",
+            "latitude",
+            "longitude",
+            "elevation",
+            "feature_name",
+            "value",
+            "quality_flag",
+            "provider_flag",
+        ]
+    ].reset_index(drop=True)
 
 
-def build_feature_name(df: pd.DataFrame) -> pd.Series:
-    depth_label = df["depth_from"].map(lambda depth: f"{depth:.2f}m")
-    ta_label = df["depth_from"].abs().map(lambda depth: f"{depth:.2f}m")
-    sensor_label = (
-        df["sensor_name"]
-        .str.lower()
-        .str.replace(" ", "_", regex=False)
-        .str.replace("-", "_", regex=False)
+def aggregate_replicates(long_frame: pd.DataFrame) -> pd.DataFrame:
+    return (
+        long_frame.groupby(STATIC_COLUMNS + ["feature_name"], as_index=False)["value"]
+        .median()
+        .sort_values(["station", "timestamp", "feature_name"])
+        .reset_index(drop=True)
     )
 
-    feature_name = pd.Series(index=df.index, dtype="object")
-    feature_name[df["variable"].isin(["sm", "ts"])] = (
-        df.loc[df["variable"].isin(["sm", "ts"]), "variable"] + "_" + depth_label[df["variable"].isin(["sm", "ts"])]
-    )
-    feature_name[df["variable"] == "ta"] = "ta_" + ta_label[df["variable"] == "ta"]
-    feature_name[df["variable"] == "p"] = "p_" + sensor_label[df["variable"] == "p"]
-    return feature_name
 
-
-def load_all_files(paths: list[Path], workers: int) -> pd.DataFrame:
-    frames = []
-    total = len(paths)
-    done = 0
-    started = time.time()
-
-    print(f"Parsing {total} files with {workers} workers...")
-    with ProcessPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(read_stm_file, path): path for path in paths}
-        for future in as_completed(futures):
-            path = futures[future]
-            done += 1
-            try:
-                df = future.result()
-                if not df.empty:
-                    frames.append(df)
-            except Exception as exc:
-                print(f"[{done}/{total}] failed: {path.name} -> {exc}")
-                raise
-
-            if done == total or done % 5 == 0:
-                elapsed = time.time() - started
-                print(f"[{done}/{total}] parsed | {elapsed:.1f}s")
-
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True)
-
-
-def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
-
-    paths = []
-    for path in sorted(RAW_DIR.rglob("*.stm")):
-        if parse_filename(path)["variable"] in KEEP_VARIABLES:
-            paths.append(path)
-
-    workers = min(len(paths), os.cpu_count() or 1)
-    raw_df = load_all_files(paths, workers)
-    if raw_df.empty:
-        raise RuntimeError("No rows parsed from ISMN files.")
-
-    append_log("\n## Step 7: Parser executed\n\n")
-    append_log(f"- Parsed `{raw_df['source_file'].nunique()}` raw `.stm` files.\n")
-    append_log(f"- Parsed `{len(raw_df):,}` timestamped observations after in-parser QC filtering.\n")
-    append_log(f"- Parser workers used: `{workers}`.\n")
-
-    append_log("\n## Step 8: Quality filtering applied\n\n")
-    append_log(f"- Retained `{len(raw_df):,}` observations with quality flag `G`.\n")
-    append_log("- Non-`G` observations were dropped inside per-file parsing for speed.\n")
-
-    print("Building feature names...")
-    raw_df["feature_name"] = build_feature_name(raw_df)
-
-    group_cols = [
-        "station",
-        "timestamp",
-        "feature_name",
-        "variable",
-        "depth_from",
-        "latitude",
-        "longitude",
-        "elevation",
-    ]
-    print("Aggregating replicate sensors...")
-    agg_df = (
-        raw_df.groupby(group_cols, dropna=False, sort=False)
-        .agg(value=("value", "median"), sensor_count=("source_file", "nunique"))
-        .reset_index()
-    )
-
-    append_log("\n## Step 9: Replicate aggregation applied\n\n")
-    append_log("- Aggregated replicate sensors by median at each station/timestamp/variable/depth combination.\n")
-    append_log(f"- Produced `{len(agg_df):,}` aggregated observations.\n")
-
-    print("Pivoting merged table...")
-    wide_df = (
-        agg_df.pivot_table(
-            index=["station", "timestamp", "latitude", "longitude", "elevation"],
+def build_merged_hourly(aggregated_frame: pd.DataFrame) -> pd.DataFrame:
+    wide_frame = (
+        aggregated_frame.pivot_table(
+            index=STATIC_COLUMNS,
             columns="feature_name",
             values="value",
             aggfunc="first",
         )
         .reset_index()
         .sort_values(["station", "timestamp"])
+        .reset_index(drop=True)
     )
-    wide_df.columns.name = None
 
-    output_path = OUTPUT_DIR / "ismn_merged_hourly.csv"
-    wide_df.to_csv(output_path, index=False)
+    wide_frame.columns.name = None
+    return wide_frame
 
-    summary = {
-        "raw_files_parsed": int(raw_df["source_file"].nunique()),
-        "observations_after_qc": int(len(raw_df)),
-        "aggregated_observations": int(len(agg_df)),
-        "merged_rows": int(len(wide_df)),
-        "merged_columns": int(len(wide_df.columns)),
-        "stations": sorted(wide_df["station"].dropna().unique().tolist()),
-        "columns": list(wide_df.columns),
-        "time_range": {
-            "start": str(wide_df["timestamp"].min()),
-            "end": str(wide_df["timestamp"].max()),
-        },
+
+def summarize_merged_dataset(merged_frame: pd.DataFrame) -> dict[str, object]:
+    feature_columns = [column for column in merged_frame.columns if column not in STATIC_COLUMNS]
+    return {
+        "rows": int(len(merged_frame)),
+        "columns": int(len(merged_frame.columns)),
+        "stations": sorted(merged_frame["station"].dropna().unique().tolist()),
+        "rows_per_station": merged_frame["station"].value_counts().sort_index().to_dict(),
+        "time_start": None if merged_frame.empty else merged_frame["timestamp"].min().isoformat(),
+        "time_end": None if merged_frame.empty else merged_frame["timestamp"].max().isoformat(),
+        "missingness": merged_frame[feature_columns].isna().mean().round(6).to_dict(),
     }
 
-    with (SUMMARY_DIR / "merge_summary.json").open("w", encoding="utf-8") as handle:
-        json.dump(summary, handle, indent=2)
 
-    append_log("\n## Step 10: Merged output saved\n\n")
-    append_log(f"- Saved merged hourly CSV to `{output_path.as_posix()}`.\n")
-    append_log(f"- Saved summary JSON to `{(SUMMARY_DIR / 'merge_summary.json').as_posix()}`.\n")
-    append_log(f"- Final merged shape: `{wide_df.shape[0]:,}` rows x `{wide_df.shape[1]}` columns.\n")
+def save_summary(summary: dict[str, object], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
-    print(f"Saved merged CSV: {output_path}")
-    print(f"Merged shape: {wide_df.shape}")
-    print(f"Columns: {list(wide_df.columns)}")
+
+def load_download_metadata(metadata_path: Path = METADATA_PATH) -> dict[str, object]:
+    if not metadata_path.exists():
+        return {}
+    return json.loads(metadata_path.read_text(encoding="utf-8"))
+
+
+def collect_stm_files(raw_data_root: Path = RAW_DATA_ROOT) -> list[Path]:
+    return sorted(raw_data_root.rglob("*.stm"))
+
+
+def parse_all_stm_files(stm_files: list[Path], allowed_quality: str = ALLOWED_QUALITY_FLAG) -> pd.DataFrame:
+    frames = []
+    for index, file_path in enumerate(stm_files, start=1):
+        print(f"[{index}/{len(stm_files)}] Reading {file_path.name}")
+        frames.append(read_stm_file(file_path, allowed_quality=allowed_quality))
+    if not frames:
+        raise ValueError("No .stm files were found in the raw data directory.")
+    return pd.concat(frames, ignore_index=True)
+
+
+def order_merged_columns(merged_frame: pd.DataFrame) -> pd.DataFrame:
+    feature_columns = [column for column in merged_frame.columns if column not in STATIC_COLUMNS]
+    ordered_features = [column for column in PREFERRED_FEATURE_ORDER if column in feature_columns]
+    remaining_features = sorted(column for column in feature_columns if column not in ordered_features)
+    return merged_frame[STATIC_COLUMNS + ordered_features + remaining_features]
+
+
+def build_and_save_merged_dataset() -> dict[str, object]:
+    metadata = load_download_metadata()
+    download_flag = metadata.get("download_info", {}).get("g_flag_only")
+    if download_flag is not True:
+        print("Download metadata does not enforce G-only filtering; applying local G-only rule for preprocessing.")
+
+    stm_files = collect_stm_files()
+    print(f"Found {len(stm_files)} raw .stm files")
+
+    long_frame = parse_all_stm_files(stm_files, allowed_quality=ALLOWED_QUALITY_FLAG)
+    print(f"Retained {len(long_frame)} observations with quality flag {ALLOWED_QUALITY_FLAG}")
+
+    aggregated = aggregate_replicates(long_frame)
+    print(f"Aggregated to {len(aggregated)} station/timestamp/feature rows after replicate median")
+
+    merged = order_merged_columns(build_merged_hourly(aggregated))
+
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    merged.to_csv(MERGED_OUTPUT_PATH, index=False)
+    summary = summarize_merged_dataset(merged)
+    save_summary(summary, SUMMARY_OUTPUT_PATH)
+
+    print(f"Saved merged dataset to {MERGED_OUTPUT_PATH}")
+    print(f"Saved summary JSON to {SUMMARY_OUTPUT_PATH}")
+    print(f"Merged shape: {merged.shape[0]} rows x {merged.shape[1]} columns")
+
+    return summary
+
+
+def main() -> None:
+    build_and_save_merged_dataset()
 
 
 if __name__ == "__main__":

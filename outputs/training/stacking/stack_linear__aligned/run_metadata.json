@@ -1,0 +1,24 @@
+{
+  "model": "stacking",
+  "ensemble_type": "linear_regression",
+  "members": {
+    "xgboost": "full_multiscale__strong",
+    "knn": "baseline_limited__light",
+    "prophet": "prophet__safe"
+  },
+  "selected_knn_neighbor_count": 13,
+  "aligned_row_count": 19718,
+  "aligned_val_row_count": 10161,
+  "aligned_test_row_count": 9557,
+  "feature_columns": [
+    "xgboost_pred",
+    "knn_pred",
+    "prophet_pred"
+  ],
+  "coefficients": {
+    "xgboost_pred": 1.0100756605673977,
+    "knn_pred": -0.0046290927284484305,
+    "prophet_pred": 0.02429878170890143
+  },
+  "intercept": -0.010612483543655182
+}

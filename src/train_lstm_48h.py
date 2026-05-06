@@ -2,18 +2,24 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 import random
+import sys
 
 import numpy as np
 import pandas as pd
 
-from training.config import OUTPUTS_TRAINING, SEQUENCE_FEATURES, TARGET_COLUMN
-from training.data import build_time_splits, load_full_dataset, make_sequence_arrays
-from training.evaluation import regression_metrics, save_run_outputs, summarize_metric_runs
-from training.sequence import split_sequence_meta
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+if str(WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT))
+
+from src.training.config import DEFAULT_TARGET_COLUMN, OUTPUTS_TRAINING_DIR, SEQUENCE_FEATURES
+from src.training.data import chronological_split, load_full_prepared_dataset
+from src.training.evaluation import compute_metrics, save_run_outputs, summarize_run_metrics
+from src.training.sequence import make_sequence_arrays, split_sequence_meta
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train LSTM for 48-hour soil moisture forecasting.")
     parser.add_argument("--lookback", type=int, default=168)
     parser.add_argument("--seeds", default="42,52,62")
@@ -21,7 +27,18 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--threads", type=int, default=max(1, os.cpu_count() or 1))
+    parser.add_argument("--output-tag", default=None)
     return parser.parse_args()
+
+
+def parse_seeds(seeds_text: str) -> list[int]:
+    return [int(item.strip()) for item in seeds_text.split(",") if item.strip()]
+
+
+def resolve_output_dir_name(base_name: str, output_tag: str | None) -> str:
+    if output_tag:
+        return f"{base_name}__{output_tag}"
+    return base_name
 
 
 def set_seed(seed: int):
@@ -44,18 +61,7 @@ def configure_tensorflow(threads: int):
     gpus = tf.config.list_physical_devices("GPU")
     cpus = tf.config.list_physical_devices("CPU")
     print(f"TensorFlow devices | CPU: {len(cpus)} | GPU: {len(gpus)}")
-
-    if gpus:
-        try:
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            from tensorflow.keras import mixed_precision
-
-            mixed_precision.set_global_policy("mixed_float16")
-            print("Mixed precision enabled.")
-        except Exception as exc:
-            print(f"GPU setup warning: {exc}")
-    else:
+    if not gpus:
         print("GPU unavailable. Running CPU-only.")
 
 
@@ -76,38 +82,43 @@ def build_model(input_shape):
     return model
 
 
-def main():
+def main() -> Path:
     try:
-        import tensorflow as tf  # noqa: F401
+        import tensorflow as tf
     except ImportError as exc:
         raise SystemExit("tensorflow is not installed. Install it before running this script.") from exc
 
     args = parse_args()
     configure_tensorflow(args.threads)
-    seeds = [int(item.strip()) for item in args.seeds.split(",") if item.strip()]
-    df = load_full_dataset()
-    split_source = df.dropna(subset=[TARGET_COLUMN]).copy()
-    splits = build_time_splits(split_source)
+    seeds = parse_seeds(args.seeds)
 
-    X, y, meta = make_sequence_arrays(df, SEQUENCE_FEATURES, TARGET_COLUMN, lookback=args.lookback)
-    train_mask, val_mask, test_mask = split_sequence_meta(meta, splits.train_end, splits.val_end)
-    X_train, y_train = X[train_mask], y[train_mask]
-    X_val, y_val, meta_val = X[val_mask], y[val_mask], meta[val_mask].reset_index(drop=True)
-    X_test, y_test, meta_test = X[test_mask], y[test_mask], meta[test_mask].reset_index(drop=True)
+    full_dataset = load_full_prepared_dataset()
+    split_source = full_dataset.dropna(subset=[DEFAULT_TARGET_COLUMN]).copy()
+    train_df, val_df, test_df = chronological_split(split_source, train_fraction=0.7, val_fraction=0.15)
+    train_end = train_df["timestamp"].max()
+    val_end = val_df["timestamp"].max()
 
-    import tensorflow as tf
+    sequence_source = full_dataset.dropna(subset=SEQUENCE_FEATURES + [DEFAULT_TARGET_COLUMN]).copy()
+    x_values, y_values, meta = make_sequence_arrays(sequence_source, SEQUENCE_FEATURES, DEFAULT_TARGET_COLUMN, args.lookback)
+    train_mask, val_mask, test_mask = split_sequence_meta(meta, train_end=train_end, val_end=val_end)
 
-    train_ds = tf.data.Dataset.from_tensor_slices((X_train, y_train)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
-    val_ds = tf.data.Dataset.from_tensor_slices((X_val, y_val)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
+    x_train, y_train = x_values[train_mask], y_values[train_mask]
+    x_val, y_val, meta_val = x_values[val_mask], y_values[val_mask], meta[val_mask].reset_index(drop=True)
+    x_test, y_test, meta_test = x_values[test_mask], y_values[test_mask], meta[test_mask].reset_index(drop=True)
 
-    metrics_rows = []
+    train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
+    val_ds = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
+
+    rows = []
     prediction_frames = []
-    for run_idx, seed in enumerate(seeds, start=1):
+    for seed in seeds:
         set_seed(seed)
-        model = build_model((X_train.shape[1], X_train.shape[2]))
+        model = build_model((x_train.shape[1], x_train.shape[2]))
         callbacks = [
             tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", patience=args.patience, restore_best_weights=True
+                monitor="val_loss",
+                patience=args.patience,
+                restore_best_weights=True,
             )
         ]
         model.fit(
@@ -118,31 +129,42 @@ def main():
             callbacks=callbacks,
         )
 
-        for split_name, X_split, y_split, meta_split in [
-            ("val", X_val, y_val, meta_val),
-            ("test", X_test, y_test, meta_test),
+        for split_name, x_split, y_split, meta_split in [
+            ("val", x_val, y_val, meta_val),
+            ("test", x_test, y_test, meta_test),
         ]:
-            preds = model.predict(X_split, verbose=0).reshape(-1)
-            row = {"run": run_idx, "seed": seed, "split": split_name}
-            row.update(regression_metrics(y_split, preds))
-            metrics_rows.append(row)
+            predictions = model.predict(x_split, verbose=0).reshape(-1)
+            metric_row = {"seed": seed, "split": split_name}
+            metric_row.update(compute_metrics(y_split, predictions))
+            rows.append(metric_row)
 
-            pred_df = meta_split.copy()
-            pred_df["run"] = run_idx
-            pred_df["seed"] = seed
-            pred_df["split"] = split_name
-            pred_df["model"] = "lstm"
-            pred_df["y_true"] = y_split
-            pred_df["y_pred"] = preds
-            prediction_frames.append(pred_df)
+            prediction_frame = meta_split.copy()
+            prediction_frame["seed"] = seed
+            prediction_frame["split"] = split_name
+            prediction_frame["y_true"] = y_split
+            prediction_frame["y_pred"] = predictions
+            prediction_frames.append(prediction_frame)
 
-    metrics_df = pd.DataFrame(metrics_rows)
-    predictions_df = pd.concat(prediction_frames, ignore_index=True)
-    summary_df = summarize_metric_runs(metrics_df)
-    output_dir = OUTPUTS_TRAINING / "lstm"
-    metadata = {"model": "lstm", "lookback": args.lookback, "sequence_features": SEQUENCE_FEATURES, "seeds": seeds}
-    save_run_outputs(output_dir, metrics_df, predictions_df, summary_df, metadata)
+    run_metrics = pd.DataFrame(rows)
+    predictions = pd.concat(prediction_frames, ignore_index=True)
+    test_metrics = run_metrics.loc[run_metrics["split"] == "test", ["seed", "rmse", "mae", "r2"]].rename(columns={"seed": "run_id"})
+    summary = summarize_run_metrics(test_metrics)
+
+    output_dir = OUTPUTS_TRAINING_DIR / "lstm" / resolve_output_dir_name("lstm", args.output_tag)
+    metadata = {
+        "model": "lstm",
+        "output_tag": args.output_tag,
+        "lookback": args.lookback,
+        "sequence_features": SEQUENCE_FEATURES,
+        "seeds": seeds,
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "patience": args.patience,
+        "target_column": DEFAULT_TARGET_COLUMN,
+    }
+    save_run_outputs(output_dir, run_metrics, predictions, summary, metadata)
     print(output_dir)
+    return output_dir
 
 
 if __name__ == "__main__":

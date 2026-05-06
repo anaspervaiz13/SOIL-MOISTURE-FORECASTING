@@ -1,0 +1,3 @@
+station,timestamp,seed,split,y_true,y_pred
+A,2021-01-01 00:00:00,42,test,0.1,0.1
+A,2021-01-01 00:00:00,52,test,0.1,0.1

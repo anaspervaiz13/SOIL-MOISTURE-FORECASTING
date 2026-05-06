@@ -1,0 +1,24 @@
+{
+  "model": "arima",
+  "output_tag": "safe180",
+  "order": [
+    3,
+    0,
+    1
+  ],
+  "seasonal_order": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "max_history_hours": 4320,
+  "target_column": "target_48h",
+  "target_source_column": "sm_0.05m",
+  "skipped_stations": [
+    "Selhausen"
+  ],
+  "skipped_reasons": {
+    "Selhausen": "test_forecast_failed"
+  }
+}

@@ -1,93 +1,47 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-from .config import FULL_DATASET_PATH, READY_DATASET_PATH, STATION_COLUMN, TARGET_COLUMN, TIMESTAMP_COLUMN
+from .config import DEFAULT_FULL_DATASET_PATH, DEFAULT_READY_DATASET_PATH, STATIC_COLUMNS
+from .feature_sets import get_feature_group_columns
 
 
-@dataclass
-class DatasetSplits:
-    train: pd.DataFrame
-    val: pd.DataFrame
-    test: pd.DataFrame
-    train_end: pd.Timestamp
-    val_end: pd.Timestamp
+def load_prepared_dataset(dataset_path: Path | None = None) -> pd.DataFrame:
+    path = DEFAULT_READY_DATASET_PATH if dataset_path is None else Path(dataset_path)
+    return pd.read_csv(path, parse_dates=["timestamp"])
 
 
-def load_ready_dataset(path=READY_DATASET_PATH) -> pd.DataFrame:
-    df = pd.read_csv(path, parse_dates=[TIMESTAMP_COLUMN])
-    return df.sort_values([TIMESTAMP_COLUMN, STATION_COLUMN]).reset_index(drop=True)
+def load_full_prepared_dataset(dataset_path: Path | None = None) -> pd.DataFrame:
+    path = DEFAULT_FULL_DATASET_PATH if dataset_path is None else Path(dataset_path)
+    return pd.read_csv(path, parse_dates=["timestamp"])
 
 
-def load_full_dataset(path=FULL_DATASET_PATH) -> pd.DataFrame:
-    df = pd.read_csv(path, parse_dates=[TIMESTAMP_COLUMN])
-    return df.sort_values([STATION_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
+def select_feature_columns(frame: pd.DataFrame, group_name: str, target_column: str) -> list[str]:
+    columns = get_feature_group_columns(frame.columns.tolist(), group_name)
+    return [column for column in columns if column not in STATIC_COLUMNS and column != target_column]
 
 
-def build_time_splits(df: pd.DataFrame, train_ratio: float = 0.7, val_ratio: float = 0.15) -> DatasetSplits:
-    unique_times = np.array(sorted(df[TIMESTAMP_COLUMN].unique()))
-    n_times = len(unique_times)
-    if n_times < 3:
-        raise ValueError("Need at least 3 unique timestamps to build train/val/test splits.")
+def chronological_split(
+    frame: pd.DataFrame,
+    train_fraction: float = 0.7,
+    val_fraction: float = 0.15,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if train_fraction <= 0 or val_fraction <= 0 or train_fraction + val_fraction >= 1:
+        raise ValueError("Split fractions must be positive and leave room for a test split.")
 
-    train_end_idx = max(1, int(n_times * train_ratio))
-    val_end_idx = max(train_end_idx + 1, int(n_times * (train_ratio + val_ratio)))
-    train_end_idx = min(train_end_idx, n_times - 2)
-    val_end_idx = min(val_end_idx, n_times - 1)
+    ordered = frame.sort_values(["timestamp", "station"]).reset_index(drop=True)
+    unique_timestamps = ordered["timestamp"].drop_duplicates().sort_values().tolist()
 
-    train_end = pd.Timestamp(unique_times[train_end_idx - 1])
-    val_end = pd.Timestamp(unique_times[val_end_idx - 1])
+    train_end_index = max(1, int(len(unique_timestamps) * train_fraction))
+    val_end_index = max(train_end_index + 1, int(len(unique_timestamps) * (train_fraction + val_fraction)))
 
-    train = df[df[TIMESTAMP_COLUMN] <= train_end].copy()
-    val = df[(df[TIMESTAMP_COLUMN] > train_end) & (df[TIMESTAMP_COLUMN] <= val_end)].copy()
-    test = df[df[TIMESTAMP_COLUMN] > val_end].copy()
+    train_cutoff = unique_timestamps[train_end_index - 1]
+    val_cutoff = unique_timestamps[val_end_index - 1]
 
-    return DatasetSplits(train=train, val=val, test=test, train_end=train_end, val_end=val_end)
+    train_df = ordered.loc[ordered["timestamp"] <= train_cutoff].reset_index(drop=True)
+    val_df = ordered.loc[(ordered["timestamp"] > train_cutoff) & (ordered["timestamp"] <= val_cutoff)].reset_index(drop=True)
+    test_df = ordered.loc[ordered["timestamp"] > val_cutoff].reset_index(drop=True)
 
-
-def extract_xy(df: pd.DataFrame, feature_columns: list[str], target_column: str = TARGET_COLUMN):
-    X = df[feature_columns].copy()
-    y = df[target_column].copy()
-    meta = df[[STATION_COLUMN, TIMESTAMP_COLUMN]].copy()
-    return X, y, meta
-
-
-def make_sequence_arrays(
-    df: pd.DataFrame,
-    feature_columns: list[str],
-    target_column: str,
-    lookback: int = 168,
-):
-    X_list = []
-    y_list = []
-    meta_rows = []
-
-    for station, group in df.groupby(STATION_COLUMN, sort=False):
-        group = group.sort_values(TIMESTAMP_COLUMN).reset_index(drop=True)
-        values = group[feature_columns + [target_column, TIMESTAMP_COLUMN]].copy()
-
-        for end_idx in range(lookback - 1, len(values)):
-            window = values.iloc[end_idx - lookback + 1 : end_idx + 1]
-            if window[feature_columns].isna().any().any():
-                continue
-
-            target_value = values.iloc[end_idx][target_column]
-            if pd.isna(target_value):
-                continue
-
-            X_list.append(window[feature_columns].to_numpy(dtype=np.float32))
-            y_list.append(np.float32(target_value))
-            meta_rows.append(
-                {
-                    STATION_COLUMN: station,
-                    TIMESTAMP_COLUMN: values.iloc[end_idx][TIMESTAMP_COLUMN],
-                }
-            )
-
-    X = np.stack(X_list) if X_list else np.empty((0, lookback, len(feature_columns)), dtype=np.float32)
-    y = np.array(y_list, dtype=np.float32)
-    meta = pd.DataFrame(meta_rows)
-    return X, y, meta
+    return train_df, val_df, test_df
