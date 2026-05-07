@@ -103,6 +103,73 @@ def build_xgboost_ablation_table(root: Path, output_tag: str) -> pd.DataFrame:
     return summary
 
 
+def build_lag_confidence_interval_table(ablation: pd.DataFrame) -> pd.DataFrame:
+    table = ablation[
+        [
+            "feature_group",
+            "rmse_mean",
+            "rmse_ci95",
+            "mae_mean",
+            "mae_ci95",
+            "r2_mean",
+            "r2_ci95",
+            "rmse_gain_vs_baseline",
+            "relative_rmse_gain_pct_vs_baseline",
+        ]
+    ].copy()
+    table["rmse_mean_ci95"] = table.apply(
+        lambda row: f"{row['rmse_mean']:.6f} +/- {row['rmse_ci95']:.6f}",
+        axis=1,
+    )
+    table["mae_mean_ci95"] = table.apply(
+        lambda row: f"{row['mae_mean']:.6f} +/- {row['mae_ci95']:.6f}",
+        axis=1,
+    )
+    table["r2_mean_ci95"] = table.apply(
+        lambda row: f"{row['r2_mean']:.6f} +/- {row['r2_ci95']:.6f}",
+        axis=1,
+    )
+    table["rmse_gain_vs_baseline"] = table["rmse_gain_vs_baseline"].map(lambda value: f"{value:.6f}")
+    table["relative_rmse_gain_pct_vs_baseline"] = table["relative_rmse_gain_pct_vs_baseline"].map(
+        lambda value: f"{value:.3f}%"
+    )
+    return table[
+        [
+            "feature_group",
+            "rmse_mean_ci95",
+            "mae_mean_ci95",
+            "r2_mean_ci95",
+            "rmse_gain_vs_baseline",
+            "relative_rmse_gain_pct_vs_baseline",
+        ]
+    ]
+
+
+def build_lag_confidence_interval_markdown(table: pd.DataFrame) -> str:
+    lines = [
+        "# XGBoost Lag Confidence Intervals",
+        "",
+        "| Feature Group | RMSE (mean +/- 95% CI) | MAE (mean +/- 95% CI) | R2 (mean +/- 95% CI) | RMSE gain vs baseline | Relative RMSE gain |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for _, row in table.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["feature_group"]),
+                    str(row["rmse_mean_ci95"]),
+                    str(row["mae_mean_ci95"]),
+                    str(row["r2_mean_ci95"]),
+                    str(row["rmse_gain_vs_baseline"]),
+                    str(row["relative_rmse_gain_pct_vs_baseline"]),
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.DataFrame:
     xgboost_dir = outputs_root / "xgboost" / args.xgboost_best_experiment
     catboost_dir = outputs_root / "catboost" / args.catboost_experiment
@@ -314,14 +381,18 @@ def main() -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ablation = build_xgboost_ablation_table(OUTPUTS_TRAINING_DIR / "xgboost", args.xgboost_ablation_tag)
+    lag_confidence_table = build_lag_confidence_interval_table(ablation)
     benchmark = build_benchmark_table(OUTPUTS_TRAINING_DIR, args)
     common_subset_benchmark = build_common_subset_benchmark_table(OUTPUTS_TRAINING_DIR, args)
     markdown = build_markdown_summary(ablation, benchmark)
+    lag_confidence_markdown = build_lag_confidence_interval_markdown(lag_confidence_table)
 
     ablation.to_csv(output_dir / "xgboost_ablation_table.csv", index=False)
+    lag_confidence_table.to_csv(output_dir / "xgboost_lag_confidence_intervals.csv", index=False)
     benchmark.to_csv(output_dir / "benchmark_table.csv", index=False)
     common_subset_benchmark.to_csv(output_dir / "common_subset_benchmark_table.csv", index=False)
     (output_dir / "novelty_results_summary.md").write_text(markdown, encoding="utf-8")
+    (output_dir / "xgboost_lag_confidence_intervals.md").write_text(lag_confidence_markdown, encoding="utf-8")
 
     print(output_dir)
     return output_dir

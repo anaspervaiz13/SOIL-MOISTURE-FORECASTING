@@ -7,6 +7,7 @@ import pandas as pd
 from src.export_novelty_results import (
     build_benchmark_table,
     build_common_subset_benchmark_table,
+    build_lag_confidence_interval_table,
     build_markdown_summary,
     build_xgboost_ablation_table,
 )
@@ -171,6 +172,52 @@ class TestExportNoveltyResults(unittest.TestCase):
         self.assertIn("temporal lag design", markdown)
         self.assertIn("full_multiscale", markdown)
         self.assertIn("same effective test population", markdown)
+
+    def test_build_lag_confidence_interval_table_formats_metrics_for_reporting(self):
+        ablation = pd.DataFrame(
+            [
+                {
+                    "feature_group": "full_multiscale",
+                    "rmse_mean": 0.0291223457131665,
+                    "rmse_ci95": 0.0001917926411280,
+                    "mae_mean": 0.0186473777425181,
+                    "mae_ci95": 0.0000957164150771,
+                    "r2_mean": 0.8545854334818748,
+                    "r2_ci95": 0.0019207376213611,
+                    "rmse_gain_vs_baseline": 0.0004657308467260,
+                    "relative_rmse_gain_pct_vs_baseline": 1.5740490794772,
+                },
+                {
+                    "feature_group": "baseline_limited",
+                    "rmse_mean": 0.0295880765598925,
+                    "rmse_ci95": 0.0000604119573957,
+                    "mae_mean": 0.0183585806196150,
+                    "mae_ci95": 0.0000897898105826,
+                    "r2_mean": 0.8499033681050104,
+                    "r2_ci95": 0.0006130900534100,
+                    "rmse_gain_vs_baseline": 0.0,
+                    "relative_rmse_gain_pct_vs_baseline": 0.0,
+                },
+            ]
+        )
+
+        table = build_lag_confidence_interval_table(ablation)
+
+        self.assertEqual(
+            list(table.columns),
+            [
+                "feature_group",
+                "rmse_mean_ci95",
+                "mae_mean_ci95",
+                "r2_mean_ci95",
+                "rmse_gain_vs_baseline",
+                "relative_rmse_gain_pct_vs_baseline",
+            ],
+        )
+        self.assertEqual(table.iloc[0]["feature_group"], "full_multiscale")
+        self.assertEqual(table.iloc[0]["rmse_mean_ci95"], "0.029122 +/- 0.000192")
+        self.assertEqual(table.iloc[1]["rmse_gain_vs_baseline"], "0.000000")
+        self.assertEqual(table.iloc[0]["relative_rmse_gain_pct_vs_baseline"], "1.574%")
 
     def test_build_common_subset_benchmark_table_aligns_selected_models(self):
         root = RUNTIME_DIR / "common_subset_benchmark"
