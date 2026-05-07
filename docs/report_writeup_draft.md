@@ -1,106 +1,162 @@
-# Multi-Scale Temporal Feature Design for 48-Hour Soil Moisture Forecasting
+# Multi-Scale Temporal Feature Design for 48-Hour Soil Moisture Forecasting Using ISMN Station Data
 
-## Abstract
+## 1. Abstract
 
-Soil moisture forecasting is important for agriculture, irrigation planning, and understanding land-atmosphere interactions. However, many forecasting studies focus mainly on comparing machine learning models, while giving less attention to a simple but important question: **which parts of past history are actually useful for predicting future soil moisture?**
+Soil moisture forecasting is useful for agriculture, irrigation planning, drought monitoring, and environmental studies. Many existing studies focus mainly on comparing different machine learning or deep learning models, but they do not always study an equally important question: which parts of past history are actually most useful for future prediction. This project focuses on that question for 48-hour-ahead soil moisture forecasting using ISMN station data. The main idea is not to propose a new complex architecture, but to design a structured multi-scale temporal feature framework that uses short-term, medium-term, and weekly historical information in a more meaningful way.
 
-This project studies that question for **48-hour-ahead soil moisture forecasting** using ISMN station data. The main idea of the work is not to invent a brand-new model. Instead, the goal is to design and test a **multi-scale temporal feature framework** that uses short-term, medium-term, and weekly historical context in a structured way.
+To support this goal, the data pipeline was rebuilt from scratch. The station data was expanded onto a true hourly grid so that lag features and prediction targets represent real time gaps instead of simple row offsets. After that, a forecasting dataset was prepared using current environmental variables, calendar signals, lag features, and rolling summary statistics. The main novelty experiment was an XGBoost-based lag ablation study. The best saved ablation result came from the `full_multiscale` feature group with an RMSE of `0.029122`, compared with `0.029588` for the simpler `baseline_limited` setup. This shows a modest but consistent improvement of about `1.57%`.
 
-To support this, the data pipeline was rebuilt carefully from scratch. The ISMN station records were first expanded to a true hourly timeline so that lag features such as `24h`, `48h`, and `168h` actually represent real time gaps instead of only row offsets. After that, a forecasting dataset was created using current measurements, calendar information, lag features, and rolling summary statistics.
+Additional benchmark experiments were also carried out using CatBoost, LightGBM, KNN, Prophet, ARIMA, LSTM, GRU, and stacking. On the strict common-subset benchmark among selected strong models, XGBoost remained the best final predictor. Overall, the main contribution of this project is a simple and defensible study showing that structured multi-scale temporal context can improve 48-hour soil moisture forecasting for a strong tree-based model.
 
-The main novelty experiment was a lag ablation study using XGBoost as the anchor model. The results showed that the **full multi-scale feature design** gave the best performance, with an RMSE of **0.029122**, compared with **0.029588** for a simpler baseline-limited lag design. This is a gain of about **1.57%**, which is modest but consistent. Logged exploratory notes from later refined ablation runs also suggested that:
+## 2. Keywords
 
-- using no lag history is clearly worse,
-- weekly memory is more useful than medium-only lag expansion,
-- and rolling summaries matter when combined with structured lag features.
+- Soil moisture forecasting
+- Time-series prediction
+- Multi-scale temporal features
+- Lag ablation
+- XGBoost
+- ISMN
 
-Additional benchmark experiments were also carried out using CatBoost, LightGBM, KNN, Prophet, ARIMA, LSTM, GRU, and stacking. These experiments showed that repaired sequence models can be competitive, but the fairest common-subset comparison still favored **XGBoost** as the best final predictor among the selected strong models that were compared on that shared subset. Stacking was explored as a supporting experiment, but the exported `XGBoost + LSTM` common-subset stack did not outperform the best aligned base model.
+## 3. Introduction
 
-Overall, this project contributes a **simple, defensible, and methodologically careful study of temporal context design** for medium-horizon soil moisture forecasting. The main contribution is the evidence that structured multi-scale history can improve prediction quality for strong tree-based models, even if the gain is not very large.
+Soil moisture plays an important role in agriculture, crop health, drought analysis, irrigation scheduling, and environmental monitoring. It is affected by rainfall, temperature, evaporation, and the previous state of the soil. Because of this, forecasting future soil moisture can help both practical decision-making and scientific understanding. For medium-horizon forecasting such as 48 hours ahead, it is important to capture not only current conditions but also useful information from the past.
 
----
+Many existing forecasting studies compare different models such as XGBoost, LSTM, GRU, Transformer, Random Forest, or hybrid systems. That work is useful, but it often puts more attention on model competition than on historical feature design. In many cases, lag features are chosen in a fixed way and then the models are compared without carefully checking which temporal history scales are actually helping. This creates a limitation, because good performance may depend not only on model choice, but also on how the past is represented.
 
-## 1. Introduction
+In this project, the research direction is different. Instead of trying to build a new model architecture, the work studies whether a structured temporal feature design can improve 48-hour soil moisture forecasting. The methodology uses a rebuilt ISMN forecasting pipeline, a multi-scale lag framework, and an ablation study with XGBoost as the anchor model. Supporting benchmarks are then used to understand how this temporal design behaves across different model families.
 
-Soil moisture plays an important role in agriculture, drought monitoring, irrigation, and environmental studies. It affects plant growth, infiltration, evaporation, and energy exchange between land and atmosphere. Because of this, predicting future soil moisture can help both scientific understanding and practical decision-making.
+### 3.1 Problem Statement
 
-Many forecasting studies try different machine learning or deep learning models and report which one performs best. That approach is useful, but it can also miss an important issue. In time-series forecasting, prediction quality does not depend only on the model. It also depends on **how the history of the data is represented**.
+The main problem in this project is that soil moisture forecasting models are often compared without clearly analyzing which parts of past history are actually useful for prediction. For a 48-hour forecasting task, it is not enough to say that "more history" is better. We need to know whether short-term, medium-term, and weekly memory contribute differently, and whether combining them in a structured way improves prediction.
 
-For example, if we want to predict soil moisture 48 hours ahead, we can ask:
+### 3.2 Research Gap
 
-- Does only the most recent history matter?
-- Do we need medium-range memory like 48 or 72 hours?
-- Does weekly memory help?
-- Are rolling summaries useful in addition to direct lag features?
+The gap addressed in this study is that many forecasting works focus mainly on model selection, while giving less attention to the design of temporal context itself. In soil moisture forecasting, it is reasonable to expect that different time scales matter in different ways. Very recent history may capture immediate persistence, medium-range history may reflect slower changes, and weekly memory may capture delayed hydrological behavior. However, these temporal roles are not always isolated and tested clearly.
 
-These questions are important because soil moisture is not only a short-memory variable. It is influenced by rainfall, temperature, subsurface storage, and delayed soil responses. That means soil moisture forecasting is naturally a **state-transition problem**, where the past condition of the system matters.
-
-This project focuses on that exact issue. Instead of saying "we built a brand-new model," the work asks:
-
-> Which temporal history scales are most useful for predicting soil moisture 48 hours into the future?
-
-That makes the project more than just a model competition. It becomes a study of **temporal context design**.
-
----
-
-## 2. Research Problem
-
-The main research problem in this project is:
-
-> How can we design a better historical feature set for 48-hour soil moisture forecasting, and which lag groups actually help prediction?
-
-This is different from a pure benchmark question like:
-
-> Which model gives the best score?
-
-The benchmark question is still useful, and we do answer it as a secondary part of the project. However, the central research problem is about feature design and temporal structure.
-
-In simpler words, this project is trying to understand:
-
-- what part of the past should be used,
-- how to organize that past information,
-- and whether using short, medium, and weekly history together is better than using simpler lag setups.
-
----
-
-## 3. Research Gap
-
-A lot of work in forecasting focuses on model choice. Researchers often compare models like XGBoost, LSTM, GRU, Transformer, Random Forest, or hybrid systems. That is valuable, but it can shift too much attention toward architecture competition.
-
-In soil moisture forecasting, it is reasonable to expect that **time scale matters**:
-
-- very recent history may capture immediate persistence,
-- medium-range history may reflect slower changes,
-- weekly memory may carry delayed hydrological effects,
-- rolling summaries may capture short-term stability or accumulated conditions.
-
-Even so, this temporal question is often not isolated clearly. Many studies use a fixed lag design and then compare models, without carefully testing which history groups are responsible for the result.
-
-This project addresses that gap by making the following question central:
-
-> If we design temporal context more carefully, can we improve 48-hour soil moisture forecasting in a measurable way?
-
-That is the main novelty of the study.
-
----
-
-## 4. Objectives
+### 3.3 Objectives and Contributions
 
 The objectives of this project are:
 
 1. Build a clean and methodologically safe hourly forecasting dataset from ISMN station data.
-2. Design a structured multi-scale temporal feature framework for 48-hour forecasting.
-3. Test whether short, medium, and weekly lag groups help prediction through ablation.
-4. Compare several model families as supporting benchmarks.
-5. Check whether stacking gives meaningful additional value beyond strong single models.
+2. Design a multi-scale temporal feature framework for 48-hour forecasting.
+3. Test the contribution of different lag groups through ablation.
+4. Compare several benchmark model families as supporting evidence.
+5. Check whether stacking gives additional value beyond strong single models.
 
-The most important objective is still objective 3: **the lag ablation study**.
+The main contribution of the project is a structured and defensible lag-design study showing that multi-scale temporal context improves prediction for a strong tree-based model, even though the improvement is moderate.
 
----
+## 4. Literature Review (Related Work)
 
-## 5. Dataset and Study Setup
+This section is intentionally left as a placeholder for now.
 
-The project uses ISMN station data already available in the workspace. The current station scope includes:
+What still needs to be added here:
+
+- discussion of existing soil moisture forecasting studies
+- short critical analysis of previous machine learning and deep learning work
+- identification of limitations in earlier work
+- positioning of this study compared with those works
+- a short and concise comparison table
+
+### Figure/Table Placeholder
+
+- `[PLACEHOLDER: Literature review comparison table]`
+
+## 5. Methodology (Proposed Approach)
+
+### 5.1 Overall Framework
+
+The proposed approach is centered on multi-scale temporal feature design for 48-hour soil moisture forecasting. The main idea is to prepare a clean hourly dataset, build structured lag and rolling features, and then test whether these temporal groups improve forecasting performance. XGBoost is used as the main ablation anchor because it is strong, stable, and easy to interpret when explicit lag features are used.
+
+The full workflow of the study can be summarized as follows:
+
+1. Read and clean raw ISMN station data.
+2. Expand each station to a true hourly grid.
+3. Create future targets for forecasting horizons.
+4. Build current, calendar, lag, and rolling features.
+5. Train and evaluate XGBoost for ablation.
+6. Run benchmark models for supporting comparison.
+7. Analyze results using descriptive and common-subset benchmark tables.
+
+### 5.2 Data Pipeline Repair
+
+One important issue found during the project was that direct row shifting is unsafe if the station time series contains gaps. In that case, "48 rows later" may not mean "48 hours later". This can produce wrong target definitions and misleading lag features.
+
+To fix this, each station was expanded onto a true hourly timeline before forecasting targets and lag features were created. This means every hourly timestamp between the station start and end time exists explicitly in the data. Missing hours remain visible as gaps, and lag features such as `24h`, `48h`, and `168h` now represent real clock-hour differences.
+
+### 5.3 Multi-Scale Temporal Feature Design
+
+The main proposed feature framework uses several groups of predictors:
+
+- current-state variables
+- calendar and seasonal signals
+- short-term lag features
+- medium-term lag features
+- weekly lag features
+- rolling summary features
+
+The lag design is organized into meaningful temporal groups:
+
+- short-term context: `1, 3, 6, 12, 24` hours
+- medium-term context: `48, 72` hours
+- weekly context: `168` hours
+
+This structure is more meaningful than simply adding many lag columns. The aim is to test whether different historical scales contribute differently to forecasting quality.
+
+### 5.4 Ablation Design
+
+The current saved XGBoost ablation artifact set includes these main feature groups:
+
+- `baseline_limited`
+- `short_lags`
+- `short_plus_medium`
+- `full_multiscale`
+
+The main comparison is between the simpler baseline and the richer multi-scale setup. The project work log also contains exploratory notes from additional refined groups, but the report should treat those as supportive interpretation rather than primary saved artifacts.
+
+### 5.5 Benchmark Models
+
+To support the main novelty study, the project also evaluates:
+
+- XGBoost
+- CatBoost
+- LightGBM
+- KNN
+- Prophet
+- ARIMA
+- LSTM
+- GRU
+- stacking
+
+These models are used to provide context, not to replace the main lag-ablation contribution.
+
+### 5.6 Mathematical Formulation
+
+At a simple level, the forecasting task can be written as:
+
+`y(t + h) = f(X_t)`
+
+where:
+
+- `y(t + h)` is the future soil moisture value at forecasting horizon `h`
+- `X_t` is the feature vector available at time `t`
+- `f(.)` is the model being used
+
+In this study, the main horizon is:
+
+- `h = 48 hours`
+
+The feature vector includes:
+
+- current environmental variables
+- calendar variables
+- lagged variables from multiple time scales
+- rolling statistics
+
+## 6. Experimental Setup / Data Description
+
+### 6.1 Dataset Used
+
+This project uses ISMN station data already available in the workspace. The current station scope includes:
 
 - Gevenich
 - Merzenhausen
@@ -110,471 +166,266 @@ The main target variable is:
 
 - `sm_0.05m`
 
-The main forecasting horizon is:
-
-- `48 hours ahead`
-
-Even though the data preparation was extended to also support `24h` and `72h`, the main study is centered on the `48h` setup. This was chosen so the project keeps one stable and defensible forecasting target for the main analysis.
-
----
-
-## 6. Data Preparation
-
-### 6.1 Rebuilding the pipeline from scratch
-
-The earlier workflow was kept only as process inspiration, not as content to reuse. A fresh data pipeline was built in the active workspace.
-
-The preparation started by reading raw ISMN `.stm` files and applying the local quality rule:
-
-- keep only observations where the quality flag is `G`
-
-Replicate observations for the same station, timestamp, and variable were then aggregated using the median.
-
-This produced a merged hourly dataset covering the three stations with multiple environmental and soil variables.
-
-### 6.2 Important methodological issue that was found
-
-During review, an important problem was discovered:
-
-the earlier version of forecasting features used row shifts directly.
-
-That is dangerous because if there are gaps in the time series, then:
-
-- "48 rows later" is not always the same as "48 hours later"
-- lag and rolling features can cross outages and long breaks
-
-This would make the dataset methodologically unsafe for real hour-ahead forecasting.
-
-### 6.3 Fixing time continuity
-
-To solve this, each station was first expanded onto a **true hourly grid** before target generation and lag creation.
-
-This means:
-
-- every hour between the station start and end time is represented,
-- missing hours appear explicitly,
-- lag features such as `24h`, `48h`, and `168h` now correspond to real clock hours.
-
-This was one of the most important methodological fixes in the project.
-
-### 6.4 Forecasting datasets prepared
-
-After the repair, forecasting datasets were prepared for:
-
-- `24h`
-- `48h`
-- `72h`
-
-The main model-ready dataset for the core study is still:
+Although datasets were also prepared for `24h` and `72h`, the main analysis in this study is based on:
 
 - `ismn_forecasting_48h_ready.csv`
 
----
+### 6.2 Preprocessing Steps
 
-## 7. Feature Engineering
+The main preprocessing steps were:
 
-The forecasting table includes several groups of features.
+1. Read raw `.stm` station files.
+2. Keep only observations with quality flag `G`.
+3. Aggregate duplicate observations using the median.
+4. Merge station data into a common hourly dataset.
+5. Expand each station onto a true hourly grid.
+6. Create forecasting targets for `24h`, `48h`, and `72h`.
+7. Create current, calendar, lag, and rolling features.
+8. Prepare model-ready datasets after filtering incomplete rows where required.
 
-### 7.1 Current-state features
+### 6.3 Tools and Environment
 
-These include the available environmental and soil variables at the current time step, such as:
+The implementation was carried out in Python. The main tools and libraries used in this project include:
 
-- surface soil moisture
-- deeper soil moisture
-- air temperature
-- soil temperature
-- precipitation
+- Python
+- pandas
+- NumPy
+- XGBoost
+- CatBoost
+- LightGBM
+- TensorFlow / Keras
+- scikit-learn
 
-### 7.2 Calendar features
+The work was developed and tested in the active local project environment.
 
-Calendar and seasonal signals were added, including:
+### 6.4 Parameter Settings
 
-- hour
-- day of week
-- month
-- day of year
-- cyclic encodings such as `hour_sin`, `hour_cos`, `doy_sin`, and `doy_cos`
+The exact parameter settings varied across models, but the main study used:
 
-### 7.3 Lag features
+- XGBoost as the main ablation anchor
+- repaired LSTM with contiguous hourly sequences
+- repaired GRU with the same sequence pipeline
+- repeated-seed evaluation for the major benchmark models
 
-Lag features were added at:
+For the sequence models, the repaired main benchmark setup used:
 
-- `1h`
-- `3h`
-- `6h`
-- `12h`
-- `24h`
-- `48h`
-- `72h`
-- `168h`
+- lookback: `168`
+- forecasting horizon: `48h`
+- repeated seeds: `42, 52, 62`
 
-### 7.4 Rolling features
+### Figure/Table Placeholders
 
-Rolling summaries were added to capture short-term and medium-term history more smoothly, including:
+- `[PLACEHOLDER: Dataset summary table]`
+- `[PLACEHOLDER: Preprocessing workflow figure]`
+- `[PLACEHOLDER: Feature-group summary table]`
 
-- rolling means
-- rolling standard deviations
-- rolling precipitation sums
+## 7. Results and Discussion
 
-The important idea is that these are not just "extra features." They are part of a **temporal design strategy**.
+### 7.1 Performance Metrics
 
----
+The main metrics used in this project are:
 
-## 8. Main Methodological Idea: Multi-Scale Temporal Context
+- RMSE
+- MAE
+- R2
 
-The feature design was organized into meaningful temporal groups:
+RMSE is especially important in this report because it is the main metric used to compare forecasting accuracy across the saved experiments.
 
-- **short-term context**: `1, 3, 6, 12, 24` hours
-- **medium-term context**: `48, 72` hours
-- **weekly context**: `168` hours
+### 7.2 Descriptive Benchmark Results
 
-The goal was not simply to add more and more lag columns. The goal was to test whether different history scales contribute differently to prediction.
+Because all models do not share the same effective test coverage, the project keeps a descriptive benchmark table for broad comparison. This table is useful for context, but it is not a strict apples-to-apples ranking.
 
-This is the reason the novelty of the project is better described as:
+Important descriptive benchmark results include:
 
-**multi-scale temporal feature design**
+- XGBoost `full_multiscale`: `RMSE 0.028472`
+- CatBoost `baseline_limited__confirm`: `RMSE 0.028641`
+- LightGBM `full_multiscale__full`: `RMSE 0.029128`
+- KNN `baseline_limited__light`: `RMSE 0.036659`
+- LSTM `lstm__repaired40`: `RMSE 0.026863`
+- GRU `gru__repaired40`: `RMSE 0.027710`
+- Prophet `prophet__safe`: `RMSE 0.068825`
+- ARIMA `arima__safe180`: `RMSE 0.270940`
 
-rather than:
+These numbers show that strong tree models and repaired sequence models clearly perform better than the classical baselines in this study.
 
-**we used longer lags**
+### 7.3 Common-Subset Benchmark Results
 
----
-
-## 9. Experimental Design
-
-The experiments were split into two major parts.
-
-### 9.1 Part A: Novelty / ablation
-
-This part asks:
-
-> For one strong model family, which temporal feature design works best?
-
-The anchor model for this part is:
-
-- `XGBoost`
-
-This was chosen because:
-
-- it is strong and stable,
-- it works naturally with explicit lag features,
-- and the lag-group effect is easy to interpret on it.
-
-### 9.2 Part B: Benchmarking
-
-This part asks:
-
-> Across different model families, how strong is the forecasting performance?
-
-The benchmark side includes:
+To make comparison cleaner, a strict common-subset benchmark table was also exported. This table compares selected strong models only on the same exact test keys. It currently includes:
 
 - XGBoost
 - CatBoost
 - LightGBM
-- KNN
-- LSTM
-- GRU
-- Prophet
-- ARIMA
-- stacking
+- repaired LSTM
+- repaired GRU
+- one selected stacking run
 
-This part is useful, but it is supporting evidence rather than the main novelty.
+On this strict common subset, the main results are:
 
----
+1. XGBoost `full_multiscale`
+   - `RMSE 0.021586`
+   - `R2 0.928231`
+2. Stacking `XGBoost + LSTM` (linear)
+   - `RMSE 0.021619`
+   - `R2 0.928010`
+3. CatBoost `baseline_limited`
+   - `RMSE 0.021935`
+   - `R2 0.925889`
+4. LightGBM `full_multiscale`
+   - `RMSE 0.023002`
+5. LSTM `repaired40`
+   - `RMSE 0.026594`
+6. GRU `repaired40`
+   - `RMSE 0.027526`
 
-## 10. XGBoost Lag Ablation
+This gives the cleanest final benchmark conclusion:
 
-The current saved XGBoost ablation artifact set in the workspace includes these main feature groups:
+- XGBoost is the best final predictor on the strict common subset
+- CatBoost is the next strongest tree benchmark
+- LSTM is the strongest repaired sequence benchmark
+- GRU is also strong, but weaker than LSTM
+
+### 7.4 Interpretation of Results
+
+The results suggest several important points.
+
+First, the project's main story is not that one brand-new model beat everything else. The stronger story is that temporal feature design matters. XGBoost performed best when the historical context was organized in a more structured multi-scale way.
+
+Second, the strong repaired LSTM and GRU results show that sequence models can be competitive when the sequence pipeline is methodologically correct. The earlier weak LSTM result was not proof that recurrent models are bad; it mainly reflected a pipeline problem.
+
+Third, stacking was explored, but it did not become the best final system. The selected `XGBoost + LSTM` common-subset stack came very close to XGBoost, but it still remained slightly worse on the strict aligned comparison.
+
+### 7.5 Insights, Strengths, and Limitations
+
+The main strengths of this work are:
+
+- a rebuilt and safer forecasting pipeline
+- a clear temporal feature-design focus
+- a clean XGBoost ablation study
+- multiple supporting benchmark families
+
+The main limitations are:
+
+- the lag-design gain is moderate, not dramatic
+- not all model families have the same test coverage
+- the refined XGBoost interpretation is partly supported by log evidence rather than only saved benchmark artifacts
+- `24h` and `72h` datasets were prepared, but not developed into full final reporting
+
+### Figure/Table Placeholders
+
+- `[PLACEHOLDER: Descriptive benchmark table]`
+- `[PLACEHOLDER: Common-subset benchmark table]`
+- `[PLACEHOLDER: Benchmark comparison graph at 300 DPI]`
+- `[PLACEHOLDER: Model-family comparison bar chart at 300 DPI]`
+
+## 8. Ablation Studies
+
+### 8.1 Purpose of the Ablation Study
+
+The ablation study was the most important part of the project. Its goal was to answer this question:
+
+> Which temporal feature design works best for 48-hour soil moisture forecasting?
+
+This is why XGBoost was used as the ablation anchor. It is strong, stable, and easy to interpret with explicit lag features.
+
+### 8.2 Saved XGBoost Ablation Results
+
+The saved XGBoost ablation artifact set includes these main groups:
 
 - `baseline_limited`
 - `short_lags`
 - `short_plus_medium`
 - `full_multiscale`
 
-### 10.1 Core ablation result
+The best saved result was:
 
-The strongest novelty result came from:
+- `full_multiscale`: `RMSE 0.029122`
 
-- `full_multiscale`
+The main baseline was:
 
-with:
+- `baseline_limited`: `RMSE 0.029588`
 
-- `RMSE 0.029122`
-
-The baseline comparison was:
-
-- `baseline_limited`
-  - `RMSE 0.029588`
-
-This gives:
+This means:
 
 - absolute RMSE gain: about `0.000466`
 - relative RMSE gain: about `1.57%`
 
-This is not a huge improvement, but it is a real and consistent one.
+This gain is not very large, but it is still meaningful because it is consistent and supports the idea that better temporal structure helps prediction.
 
-### 10.2 Interpretation of the saved and logged ablation evidence
+### 8.3 What the Ablation Suggests
 
-The saved artifact set already supports the main claim that `full_multiscale` is better than the simpler `baseline_limited` setup.
+The saved ablation results show that the richer multi-scale setup performs better than the simpler baseline. In addition, the project work log records exploratory refined observations suggesting that:
 
-The project work log also records exploratory refined ablation observations using additional groups such as `current_only`, `short_plus_weekly`, and `full_multiscale_no_rolling`. Those observations are useful for interpretation, but they are currently documented in the log rather than preserved as part of the active saved XGBoost artifact set.
+- using no lag history is clearly worse
+- weekly memory appears more useful than medium-only lag expansion
+- rolling summaries help when combined with lag structure
 
-So the safest interpretation for the report is:
+Because those refined observations are preserved mainly in the work log, the report should present them carefully as supportive interpretation rather than the main saved result table.
 
-- the saved XGBoost ablation confirms that a richer multi-scale setup beats the simpler baseline
-- the logged refined exploration suggests that the gain is not just "more lag columns"
-- the broader idea is that structured multi-scale context, together with rolling summaries, appears more useful than simpler lag setups
+### 8.4 CatBoost Confirmation Study
 
-That is the strongest novelty claim in the project, but the report should clearly distinguish between saved benchmark artifacts and logged exploratory interpretation.
+CatBoost was also tested as a confirmation model to see whether the same lag-design effect appears in another strong tree-based learner.
 
----
+The result was useful:
 
-## 11. CatBoost Confirmation Study
+- CatBoost performed best with `baseline_limited`
+- `full_multiscale` did not beat it
 
-Because CatBoost was a strong tree benchmark, the refined lag-ablation design was also tested on it as a confirmation study.
+This means the lag-design effect is:
 
-This was important because it asked:
+- real
+- useful
+- but model-dependent
 
-> Does the same lag-design effect also appear in another strong tree model?
+That is an important finding because it shows the effect is strongest and clearest in XGBoost, not universal across every tree model.
 
-### 11.1 CatBoost result
+### Figure/Table Placeholders
 
-The outcome was interesting:
+- `[PLACEHOLDER: XGBoost ablation results table]`
+- `[PLACEHOLDER: XGBoost ablation bar chart at 300 DPI]`
+- `[PLACEHOLDER: CatBoost confirmation table]`
 
-- `baseline_limited` was the best CatBoost configuration
-- `full_multiscale` did **not** beat it
+## 9. Conclusion and Future Work
 
-### 11.2 What this means
+### 9.1 Summary of Findings
 
-This tells us that the lag-design effect is:
+This project developed a 48-hour soil moisture forecasting study centered on multi-scale temporal feature design. The data pipeline was rebuilt carefully, especially to fix the time-continuity issue in lag and target generation. A structured lag framework was then tested using XGBoost as the main ablation anchor.
 
-- real,
-- but **model-dependent**
+The main finding is that the `full_multiscale` lag design performed better than the simpler `baseline_limited` setup. The improvement was modest, but it was still consistent and meaningful. Supporting benchmarks showed that CatBoost is also a strong tree model, while repaired LSTM and GRU models are competitive when the sequence pipeline is handled properly. Stacking was explored, but it did not beat the best aligned XGBoost model on the selected strict common-subset comparison.
 
-That is actually a useful scientific result.
+### 9.2 Key Contributions
 
-It means:
+The main contributions of this project are:
 
-- the multi-scale temporal design helps XGBoost clearly,
-- but it is not a universal gain across every strong tree learner.
+1. A cleaner and safer hourly forecasting pipeline for ISMN station data.
+2. A structured multi-scale temporal feature framework for 48-hour forecasting.
+3. An ablation-based analysis showing that richer temporal context improves XGBoost performance over a simpler lag design.
+4. Supporting benchmark evidence showing that the lag-design effect is model-dependent and that repaired sequence models can be strong.
 
-So CatBoost is valuable as a benchmark and confirmation model, but not as the primary novelty anchor.
+### 9.3 Final Remarks
 
----
+The final direction of this thesis is not stacking-first and not architecture-first. The project became a forecasting study about understanding which temporal history scales matter for medium-horizon soil moisture prediction. That makes the work more focused and more defensible.
 
-## 12. Benchmark Results
+### 9.4 Future Work
 
-### 12.1 Descriptive benchmark table
+Possible future extensions include:
 
-Because different model families do not all share the same effective test coverage, the project now keeps a **descriptive benchmark table**.
+- fully extending the same study to `24h` and `72h`
+- testing more stations and wider data coverage
+- performing robustness analysis under different seasonal or wet/dry conditions
+- adding uncertainty estimation
+- using a stricter common-subset benchmark protocol from the beginning for all models
+- revisiting ensemble learning only if a clear gain appears
 
-This table is useful for broad context, but it is not a strict apples-to-apples ranking.
+## 10. References
 
-### 12.2 Common-subset benchmark table
+This section is intentionally left as a placeholder for now.
 
-To make cross-model comparison cleaner, a **strict common-subset benchmark table** was also exported.
+What still needs to be added here:
 
-This table compares **selected strong models only** on the exact same test keys. It does not include every benchmark family. In the current exporter, the common-subset table covers XGBoost, CatBoost, LightGBM, repaired LSTM, repaired GRU, and one selected stacking run.
+- citation style selection
+- full reference list
+- minimum recent citations as required by the report format
 
-On the fair common subset, the main results are:
+### Placeholder
 
-1. `XGBoost full_multiscale`
-   - `RMSE 0.021586`
-   - `R2 0.928231`
-
-2. `Stacking (XGBoost + LSTM, linear)`
-   - `RMSE 0.021619`
-   - `R2 0.928010`
-
-3. `CatBoost baseline_limited`
-   - `RMSE 0.021935`
-   - `R2 0.925889`
-
-4. `LightGBM full_multiscale`
-   - `RMSE 0.023002`
-
-5. `LSTM repaired40`
-   - `RMSE 0.026594`
-
-6. `GRU repaired40`
-   - `RMSE 0.027526`
-
-### 12.3 Interpretation
-
-This gives a clean benchmark conclusion:
-
-- **XGBoost** is the best final predictor on the strict common subset
-- **CatBoost** is the next strongest tree benchmark
-- **LSTM** is the strongest repaired sequence benchmark
-- **GRU** is also strong, but weaker than the repaired LSTM
-
----
-
-## 13. Sequence Models
-
-The sequence-model story changed a lot during this project.
-
-### 13.1 Earlier weak LSTM result
-
-The original LSTM result was poor. However, that did not mean sequence models were inherently weak.
-
-The main reason was a methodological issue in the sequence pipeline:
-
-- sequence windows were not properly guaranteed to represent contiguous hourly history
-- feature scaling was not handled carefully
-
-### 13.2 Repaired LSTM pipeline
-
-The LSTM pipeline was repaired by:
-
-- building sequences only from contiguous hourly windows
-- using train-only scaling for features and target
-
-After that fix, the LSTM became very competitive.
-
-### 13.3 Repaired LSTM result
-
-The repaired LSTM reached:
-
-- `RMSE 0.026863`
-- `R2 0.888513`
-
-This is a major improvement over the earlier broken LSTM run.
-
-### 13.4 GRU benchmark
-
-A GRU was also tested using the same repaired sequence pipeline to check whether the sequence advantage was architecture-specific.
-
-The GRU result was:
-
-- `RMSE 0.027710`
-- `R2 0.881440`
-
-This shows:
-
-- the strong sequence-model result is not just a random accident,
-- but the repaired **LSTM still performs better than GRU** in this study.
-
----
-
-## 14. Stacking and Ensembling
-
-Stacking was explored as a performance-oriented extension, not as the main thesis contribution.
-
-Several combinations and meta-learners were tried, including:
-
-- older aligned stack settings,
-- newer stacks using XGBoost, CatBoost, and LSTM,
-- linear and XGBoost meta-learners.
-
-### 14.1 Main stacking result
-
-In the exported common-subset comparison, the selected `XGBoost + LSTM` linear stack did **not** beat the best aligned base XGBoost model.
-
-This is important.
-
-It means stacking was **not broken**, but this selected final stack was also **not the winning final system**.
-
-### 14.2 Why stacking did not win
-
-The best explanation is that:
-
-- XGBoost was already very strong,
-- the other members were too correlated with it,
-- and the extra models did not provide enough new information.
-
-So the ensemble experiments were useful, but they do not carry the thesis.
-
----
-
-## 15. Final Interpretation
-
-The clearest overall interpretation of this project is:
-
-1. The project is mainly about **temporal feature design**, not about inventing a new ensemble architecture.
-2. The lag-ablation effect is **real but modest**.
-3. The effect is **strongest and clearest in XGBoost**.
-4. CatBoost shows that this effect is **not universal across all tree models**.
-5. Repaired recurrent sequence models are **genuinely competitive**, especially LSTM.
-6. Stacking was explored, but the selected final common-subset stack did **not** materially improve beyond the best aligned XGBoost model.
-
-This is a strong and honest project direction.
-
----
-
-## 16. Main Contribution
-
-The main contribution of this project can be stated as:
-
-> We designed and evaluated a multi-scale temporal context framework for 48-hour soil moisture forecasting on ISMN station data, and showed through ablation that structured short-, medium-, and weekly-history features, together with rolling summaries, improve prediction for a strong tree-based model compared with simpler lag setups.
-
-This is the safe and defensible contribution statement.
-
-It does **not** overclaim:
-
-- it does not pretend stacking is novel,
-- it does not pretend the gain is huge,
-- and it does not pretend all models react the same way.
-
-That makes it stronger, not weaker.
-
----
-
-## 17. Limitations
-
-This study still has some limitations.
-
-### 17.1 Coverage differences between model families
-
-Not all models were evaluated on exactly the same effective population.
-
-For example:
-
-- tabular models had broader test coverage
-- sequence models required contiguous history
-- stacking required prediction overlap across members
-
-That is why two benchmark tables were needed:
-
-- descriptive full-coverage table
-- strict common-subset table
-
-### 17.2 Modest ablation gain
-
-The lag-design gain is real, but not very large. It should be presented as:
-
-- a measurable and consistent improvement,
-- not as a dramatic breakthrough.
-
-### 17.3 Scope of horizons
-
-The main project was centered on `48h` forecasting. Although `24h` and `72h` datasets were prepared, they were not fully developed into the same level of reporting.
-
----
-
-## 18. Future Work
-
-This project opens several useful directions for future work:
-
-- evaluate the same framework fully on `24h` and `72h`
-- extend the study to additional stations or broader coverage
-- perform robustness testing under different seasonal or wet/dry periods
-- explore uncertainty estimation
-- build a stricter common-subset benchmark for every saved model family from the beginning
-- test more advanced sequence architectures only if needed
-
-Future work can also revisit ensemble learning, but it should do so only if a combination shows a clear advantage over the best aligned base model.
-
----
-
-## 19. Conclusion
-
-This project started with a broader modeling direction, but became clearer over time. The final outcome is not a stacking-first thesis. It is a **48-hour soil moisture forecasting study centered on multi-scale temporal feature design**.
-
-The strongest finding is that carefully structured temporal context matters. A multi-scale lag framework, especially when combined with rolling summaries, gave the best XGBoost ablation result and improved prediction over simpler lag setups. The effect is modest, but real and defensible.
-
-The benchmark experiments added useful context. CatBoost showed that the lag-design effect is model-dependent. Repaired recurrent models, especially LSTM, showed that sequence approaches can be strong when the data pipeline is methodologically correct. Stacking was explored, but it did not beat the best aligned XGBoost model.
-
-So the final message of the project is simple:
-
-**the key contribution is not a new model architecture, but a cleaner understanding of which temporal history scales help medium-horizon soil moisture forecasting.**
+- `[PLACEHOLDER: Add formatted references here]`

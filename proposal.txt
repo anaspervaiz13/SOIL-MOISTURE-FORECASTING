@@ -1,0 +1,31 @@
+SOIL MOISTURE FORECASTING USING MULTI SCALE TEMPORAL FEATURES AND ENSEMBLE MODELS
+AUTHORS: Rayyan Ahmed Minhas (25i 7611), Anas Pervaiz (25i 7613)
+ABSTRACT:
+Soil moisture forecasting is important for smart agriculture, but 48 hour prediction is difficult because soil conditions depend on both recent and past environmental changes. In this work, we used multi scale temporal features by combining current values with lagged historical values. Different models were tested, including XGBoost, KNN, LSTM, Transformer, ARIMA, Prophet, and stacking. The study shows that using temporal history can improve soil moisture forecasting, especially with lightweight machine learning models.
+PROBLEM STATEMENT:
+Many soil moisture prediction methods are either too complex or do not make full use of historical temporal patterns. This creates a need for a simple and effective method for 48 hour soil moisture forecasting.
+RESEARCH GAP:
+•	Limited focus on which lag times are most useful.
+•	Many methods use either short history only or heavy models.
+•	Lightweight temporal forecasting is less explored.
+DATASET USED:
+•	ISMN hourly soil moisture dataset.
+•	Data from 3 stations.
+•	Target: 48 hour ahead surface soil moisture.
+KEY CONTRIBUTIONS:
+•	Used multi scale lag features for forecasting.
+•	Compared several forecasting models.
+•	Studied the effect of temporal history on prediction.
+PROPOSED METHODOLOGY:
+•	Preprocess hourly soil moisture and environmental data.
+•	Create lag and rolling features.
+•	Split data by time order.
+•	Train and compare multiple models.
+•	Evaluate with RMSE, MAE, and R2.
+KEY RESULTS:
+•	XGBoost performed best overall.
+•	Temporal features improved 48 hour forecasting.
+•	Lightweight models worked well in this study.
+CONCLUSION / IMPACT:
+The study shows that multi scale temporal features are useful for 48 hour soil moisture forecasting. It also suggests that simple machine learning models can be effective for practical agricultural prediction tasks.
+
