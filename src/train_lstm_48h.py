@@ -16,7 +16,15 @@ if str(WORKSPACE_ROOT) not in sys.path:
 from src.training.config import DEFAULT_TARGET_COLUMN, OUTPUTS_TRAINING_DIR, SEQUENCE_FEATURES
 from src.training.data import chronological_split, load_full_prepared_dataset
 from src.training.evaluation import compute_metrics, save_run_outputs, summarize_run_metrics
-from src.training.sequence import make_sequence_arrays, split_sequence_meta
+from src.training.sequence import (
+    apply_feature_scaler,
+    apply_target_scaler,
+    fit_feature_scaler,
+    fit_target_scaler,
+    inverse_target_scaler,
+    make_sequence_arrays,
+    split_sequence_meta,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,6 +34,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--dropout", type=float, default=0.2)
+    parser.add_argument("--lstm-units", default="64,32")
     parser.add_argument("--threads", type=int, default=max(1, os.cpu_count() or 1))
     parser.add_argument("--output-tag", default=None)
     return parser.parse_args()
@@ -35,10 +46,22 @@ def parse_seeds(seeds_text: str) -> list[int]:
     return [int(item.strip()) for item in seeds_text.split(",") if item.strip()]
 
 
+def parse_lstm_units(units_text: str) -> list[int]:
+    return [int(item.strip()) for item in units_text.split(",") if item.strip()]
+
+
 def resolve_output_dir_name(base_name: str, output_tag: str | None) -> str:
     if output_tag:
         return f"{base_name}__{output_tag}"
     return base_name
+
+
+def default_model_config() -> dict[str, object]:
+    return {
+        "lstm_units": [64, 32],
+        "dropout": 0.2,
+        "learning_rate": 0.001,
+    }
 
 
 def set_seed(seed: int):
@@ -65,20 +88,18 @@ def configure_tensorflow(threads: int):
         print("GPU unavailable. Running CPU-only.")
 
 
-def build_model(input_shape):
+def build_model(input_shape, lstm_units: list[int], dropout: float, learning_rate: float):
     import tensorflow as tf
 
-    model = tf.keras.Sequential(
-        [
-            tf.keras.layers.Input(shape=input_shape),
-            tf.keras.layers.LSTM(64, return_sequences=True),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.LSTM(32),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(1),
-        ]
-    )
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss="mse")
+    layers = [tf.keras.layers.Input(shape=input_shape)]
+    for index, units in enumerate(lstm_units):
+        return_sequences = index < len(lstm_units) - 1
+        layers.append(tf.keras.layers.LSTM(units, return_sequences=return_sequences))
+        layers.append(tf.keras.layers.Dropout(dropout))
+    layers.append(tf.keras.layers.Dense(1))
+
+    model = tf.keras.Sequential(layers)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss="mse")
     return model
 
 
@@ -91,6 +112,7 @@ def main() -> Path:
     args = parse_args()
     configure_tensorflow(args.threads)
     seeds = parse_seeds(args.seeds)
+    lstm_units = parse_lstm_units(args.lstm_units)
 
     full_dataset = load_full_prepared_dataset()
     split_source = full_dataset.dropna(subset=[DEFAULT_TARGET_COLUMN]).copy()
@@ -102,9 +124,18 @@ def main() -> Path:
     x_values, y_values, meta = make_sequence_arrays(sequence_source, SEQUENCE_FEATURES, DEFAULT_TARGET_COLUMN, args.lookback)
     train_mask, val_mask, test_mask = split_sequence_meta(meta, train_end=train_end, val_end=val_end)
 
-    x_train, y_train = x_values[train_mask], y_values[train_mask]
-    x_val, y_val, meta_val = x_values[val_mask], y_values[val_mask], meta[val_mask].reset_index(drop=True)
-    x_test, y_test, meta_test = x_values[test_mask], y_values[test_mask], meta[test_mask].reset_index(drop=True)
+    x_train_raw, y_train_raw = x_values[train_mask], y_values[train_mask]
+    x_val_raw, y_val_raw, meta_val = x_values[val_mask], y_values[val_mask], meta[val_mask].reset_index(drop=True)
+    x_test_raw, y_test_raw, meta_test = x_values[test_mask], y_values[test_mask], meta[test_mask].reset_index(drop=True)
+
+    feature_scaler = fit_feature_scaler(x_train_raw)
+    target_scaler = fit_target_scaler(y_train_raw)
+
+    x_train = apply_feature_scaler(x_train_raw, feature_scaler)
+    x_val = apply_feature_scaler(x_val_raw, feature_scaler)
+    x_test = apply_feature_scaler(x_test_raw, feature_scaler)
+    y_train = apply_target_scaler(y_train_raw, target_scaler)
+    y_val = apply_target_scaler(y_val_raw, target_scaler)
 
     train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
     val_ds = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(args.batch_size).prefetch(tf.data.AUTOTUNE)
@@ -113,7 +144,12 @@ def main() -> Path:
     prediction_frames = []
     for seed in seeds:
         set_seed(seed)
-        model = build_model((x_train.shape[1], x_train.shape[2]))
+        model = build_model(
+            (x_train.shape[1], x_train.shape[2]),
+            lstm_units=lstm_units,
+            dropout=args.dropout,
+            learning_rate=args.learning_rate,
+        )
         callbacks = [
             tf.keras.callbacks.EarlyStopping(
                 monitor="val_loss",
@@ -129,19 +165,20 @@ def main() -> Path:
             callbacks=callbacks,
         )
 
-        for split_name, x_split, y_split, meta_split in [
-            ("val", x_val, y_val, meta_val),
-            ("test", x_test, y_test, meta_test),
+        for split_name, x_split, y_true_split, meta_split in [
+            ("val", x_val, y_val_raw, meta_val),
+            ("test", x_test, y_test_raw, meta_test),
         ]:
-            predictions = model.predict(x_split, verbose=0).reshape(-1)
+            predictions_scaled = model.predict(x_split, verbose=0).reshape(-1)
+            predictions = inverse_target_scaler(predictions_scaled, target_scaler)
             metric_row = {"seed": seed, "split": split_name}
-            metric_row.update(compute_metrics(y_split, predictions))
+            metric_row.update(compute_metrics(y_true_split, predictions))
             rows.append(metric_row)
 
             prediction_frame = meta_split.copy()
             prediction_frame["seed"] = seed
             prediction_frame["split"] = split_name
-            prediction_frame["y_true"] = y_split
+            prediction_frame["y_true"] = y_true_split
             prediction_frame["y_pred"] = predictions
             prediction_frames.append(prediction_frame)
 
@@ -160,7 +197,12 @@ def main() -> Path:
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "patience": args.patience,
+        "learning_rate": args.learning_rate,
+        "dropout": args.dropout,
+        "lstm_units": lstm_units,
         "target_column": DEFAULT_TARGET_COLUMN,
+        "feature_scaling": "train_only_standardization",
+        "target_scaling": "train_only_standardization",
     }
     save_run_outputs(output_dir, run_metrics, predictions, summary, metadata)
     print(output_dir)

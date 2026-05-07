@@ -1,0 +1,23 @@
+{
+  "model": "stacking",
+  "ensemble_type": "linear",
+  "members": {
+    "xgboost": "full_multiscale",
+    "catboost": "full_multiscale__full",
+    "lstm": "lstm__repaired40"
+  },
+  "aligned_row_count": 12179,
+  "aligned_val_row_count": 7913,
+  "aligned_test_row_count": 4266,
+  "feature_columns": [
+    "xgboost_pred",
+    "catboost_pred",
+    "lstm_pred"
+  ],
+  "coefficients": {
+    "xgboost_pred": 0.9746857643347113,
+    "catboost_pred": -0.008287161123601585,
+    "lstm_pred": 0.05184692639916893
+  },
+  "intercept": -0.003643449466845
+}

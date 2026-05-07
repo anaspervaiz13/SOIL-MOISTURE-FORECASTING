@@ -6,9 +6,9 @@ import pandas as pd
 
 from src.train_stacking_48h import (
     build_aligned_stack_frame,
-    load_best_knn_predictions,
-    load_prophet_predictions,
-    load_xgboost_mean_predictions,
+    build_feature_columns,
+    fit_meta_learner,
+    load_seed_mean_predictions,
     select_best_knn_neighbor,
 )
 
@@ -32,9 +32,9 @@ class TestTrainStacking48h(unittest.TestCase):
     def test_prediction_loaders_align_expected_columns(self):
         root = RUNTIME_DIR / "stacking_models"
         xgb_root = root / "xgboost"
-        knn_root = root / "knn"
-        prophet_root = root / "prophet"
-        for folder in [xgb_root, knn_root, prophet_root]:
+        cat_root = root / "catboost"
+        lstm_root = root / "lstm"
+        for folder in [xgb_root, cat_root, lstm_root]:
             folder.mkdir(parents=True, exist_ok=True)
 
         pd.DataFrame(
@@ -46,33 +46,51 @@ class TestTrainStacking48h(unittest.TestCase):
 
         pd.DataFrame(
             [
-                {"neighbor_count": 5, "split": "val", "rmse": 0.03},
-                {"neighbor_count": 9, "split": "val", "rmse": 0.04},
+                {"station": "A", "timestamp": "2021-01-01 00:00:00", "seed": 42, "split": "val", "y_true": 0.1, "y_pred": 0.12},
+                {"station": "A", "timestamp": "2021-01-01 00:00:00", "seed": 52, "split": "val", "y_true": 0.1, "y_pred": 0.14},
             ]
-        ).to_csv(knn_root / "run_metrics.csv", index=False)
+        ).to_csv(cat_root / "predictions.csv", index=False)
         pd.DataFrame(
             [
-                {"station": "A", "timestamp": "2021-01-01 00:00:00", "neighbor_count": 5, "split": "val", "y_true": 0.1, "y_pred": 0.12},
-                {"station": "A", "timestamp": "2021-01-01 00:00:00", "neighbor_count": 9, "split": "val", "y_true": 0.1, "y_pred": 0.20},
+                {"station": "A", "timestamp": "2021-01-01 00:00:00", "seed": 42, "split": "val", "y_true": 0.1, "y_pred": 0.09},
+                {"station": "A", "timestamp": "2021-01-01 00:00:00", "seed": 52, "split": "val", "y_true": 0.1, "y_pred": 0.11},
             ]
-        ).to_csv(knn_root / "predictions.csv", index=False)
+        ).to_csv(lstm_root / "predictions.csv", index=False)
 
-        pd.DataFrame(
-            [
-                {"station": "A", "timestamp": "2021-01-01 00:00:00", "split": "val", "y_true": 0.1, "y_pred": 0.09},
-            ]
-        ).to_csv(prophet_root / "predictions.csv", index=False)
-        (prophet_root / "run_metadata.json").write_text(json.dumps({"model": "prophet"}), encoding="utf-8")
+        xgb_predictions = load_seed_mean_predictions(xgb_root, "xgboost_pred")
+        cat_predictions = load_seed_mean_predictions(cat_root, "catboost_pred")
+        lstm_predictions = load_seed_mean_predictions(lstm_root, "lstm_pred")
+        aligned = build_aligned_stack_frame([xgb_predictions, cat_predictions, lstm_predictions])
 
-        xgb_predictions = load_xgboost_mean_predictions(xgb_root)
-        knn_predictions, best_neighbor = load_best_knn_predictions(knn_root)
-        prophet_predictions = load_prophet_predictions(prophet_root)
-        aligned = build_aligned_stack_frame(xgb_predictions, knn_predictions, prophet_predictions)
-
-        self.assertEqual(best_neighbor, 5)
         self.assertAlmostEqual(aligned.iloc[0]["xgboost_pred"], 0.12)
-        self.assertAlmostEqual(aligned.iloc[0]["knn_pred"], 0.12)
-        self.assertAlmostEqual(aligned.iloc[0]["prophet_pred"], 0.09)
+        self.assertAlmostEqual(aligned.iloc[0]["catboost_pred"], 0.13)
+        self.assertAlmostEqual(aligned.iloc[0]["lstm_pred"], 0.10)
+
+    def test_fit_meta_learner_supports_linear_and_xgboost(self):
+        frame = pd.DataFrame(
+            [
+                {"xgboost_pred": 0.10, "catboost_pred": 0.11, "lstm_pred": 0.09, "y_true": 0.10},
+                {"xgboost_pred": 0.20, "catboost_pred": 0.19, "lstm_pred": 0.22, "y_true": 0.21},
+                {"xgboost_pred": 0.30, "catboost_pred": 0.29, "lstm_pred": 0.31, "y_true": 0.30},
+            ]
+        )
+        feature_columns = ["xgboost_pred", "catboost_pred", "lstm_pred"]
+
+        linear_model = fit_meta_learner("linear", frame, feature_columns)
+        self.assertTrue(hasattr(linear_model, "predict"))
+
+        xgb_model = fit_meta_learner("xgboost", frame, feature_columns)
+        self.assertTrue(hasattr(xgb_model, "predict"))
+
+    def test_build_feature_columns_matches_selected_members(self):
+        self.assertEqual(
+            build_feature_columns(include_catboost=False, include_lstm=True),
+            ["xgboost_pred", "lstm_pred"],
+        )
+        self.assertEqual(
+            build_feature_columns(include_catboost=True, include_lstm=True),
+            ["xgboost_pred", "catboost_pred", "lstm_pred"],
+        )
 
 
 if __name__ == "__main__":

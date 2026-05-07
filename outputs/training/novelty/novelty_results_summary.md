@@ -10,7 +10,7 @@
 ## Benchmark Context
 
 - XGBoost reference result: `RMSE 0.028472` on `9557` unique test keys.
-- Stacking reference result: `RMSE 0.028846` on `9557` aligned unique test keys.
+- Stacking reference result: `RMSE 0.021619` on `4266` aligned unique test keys.
 - Benchmark rows are descriptive and include coverage columns because the current models do not all share the same effective test population.
 
 ## Interpretation

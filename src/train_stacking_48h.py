@@ -17,11 +17,12 @@ from src.training.evaluation import compute_metrics, save_run_outputs, summarize
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build a validation-fit stacking ensemble for 48-hour forecasting.")
-    parser.add_argument("--xgboost-experiment", default="full_multiscale__strong")
-    parser.add_argument("--knn-experiment", default="baseline_limited__light")
-    parser.add_argument("--prophet-experiment", default="prophet__safe")
-    parser.add_argument("--output-tag", default="aligned")
+    parser = argparse.ArgumentParser(description="Build a second-generation stacking ensemble for 48-hour forecasting.")
+    parser.add_argument("--xgboost-experiment", default="full_multiscale")
+    parser.add_argument("--catboost-experiment", default=None)
+    parser.add_argument("--lstm-experiment", default=None)
+    parser.add_argument("--meta-learner", default="xgboost", choices=["linear", "xgboost"])
+    parser.add_argument("--output-tag", default="gen2")
     return parser.parse_args()
 
 
@@ -29,12 +30,12 @@ def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def load_xgboost_mean_predictions(experiment_dir: Path) -> pd.DataFrame:
+def load_seed_mean_predictions(experiment_dir: Path, prediction_column: str) -> pd.DataFrame:
     predictions = pd.read_csv(experiment_dir / "predictions.csv")
     grouped = (
         predictions.groupby(["station", "timestamp", "split", "y_true"], as_index=False)["y_pred"]
         .mean()
-        .rename(columns={"y_pred": "xgboost_pred"})
+        .rename(columns={"y_pred": prediction_column})
     )
     return grouped
 
@@ -46,62 +47,90 @@ def select_best_knn_neighbor(experiment_dir: Path) -> int:
     return int(best_row["neighbor_count"])
 
 
-def load_best_knn_predictions(experiment_dir: Path) -> tuple[pd.DataFrame, int]:
-    best_neighbor = select_best_knn_neighbor(experiment_dir)
-    predictions = pd.read_csv(experiment_dir / "predictions.csv")
-    filtered = predictions.loc[predictions["neighbor_count"] == best_neighbor].copy()
-    filtered = filtered[["station", "timestamp", "split", "y_true", "y_pred"]].rename(columns={"y_pred": "knn_pred"})
-    return filtered, best_neighbor
+def build_aligned_stack_frame(prediction_frames: list[pd.DataFrame]) -> pd.DataFrame:
+    if not prediction_frames:
+        return pd.DataFrame()
 
-
-def load_prophet_predictions(experiment_dir: Path) -> pd.DataFrame:
-    predictions = pd.read_csv(experiment_dir / "predictions.csv")
-    columns = ["station", "timestamp", "split", "y_true", "y_pred"]
-    filtered = predictions[columns].copy().rename(columns={"y_pred": "prophet_pred"})
-    return filtered
-
-
-def build_aligned_stack_frame(
-    xgboost_predictions: pd.DataFrame,
-    knn_predictions: pd.DataFrame,
-    prophet_predictions: pd.DataFrame,
-) -> pd.DataFrame:
-    merged = xgboost_predictions.merge(
-        knn_predictions,
-        on=["station", "timestamp", "split", "y_true"],
-        how="inner",
-    )
-    merged = merged.merge(
-        prophet_predictions,
-        on=["station", "timestamp", "split", "y_true"],
-        how="inner",
-    )
+    merged = prediction_frames[0].copy()
+    for frame in prediction_frames[1:]:
+        merged = merged.merge(
+            frame,
+            on=["station", "timestamp", "split", "y_true"],
+            how="inner",
+        )
     return merged.sort_values(["split", "station", "timestamp"]).reset_index(drop=True)
+
+
+def build_feature_columns(include_catboost: bool, include_lstm: bool) -> list[str]:
+    columns = ["xgboost_pred"]
+    if include_catboost:
+        columns.append("catboost_pred")
+    if include_lstm:
+        columns.append("lstm_pred")
+    return columns
+
+
+def fit_meta_learner(meta_learner: str, train_meta: pd.DataFrame, feature_columns: list[str]):
+    if meta_learner == "linear":
+        model = LinearRegression()
+        model.fit(train_meta[feature_columns], train_meta["y_true"])
+        return model
+
+    if meta_learner == "xgboost":
+        try:
+            from xgboost import XGBRegressor
+        except ImportError as exc:
+            raise SystemExit("xgboost is not installed. Install it before running stacking with the xgboost meta-learner.") from exc
+
+        model = XGBRegressor(
+            n_estimators=200,
+            learning_rate=0.05,
+            max_depth=3,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            objective="reg:squarederror",
+            random_state=42,
+            n_jobs=-1,
+        )
+        model.fit(train_meta[feature_columns], train_meta["y_true"])
+        return model
+
+    raise ValueError(f"Unknown meta learner: {meta_learner}")
 
 
 def main() -> Path:
     args = parse_args()
     xgboost_dir = OUTPUTS_TRAINING_DIR / "xgboost" / args.xgboost_experiment
-    knn_dir = OUTPUTS_TRAINING_DIR / "knn" / args.knn_experiment
-    prophet_dir = OUTPUTS_TRAINING_DIR / "prophet" / args.prophet_experiment
 
-    xgb_predictions = load_xgboost_mean_predictions(xgboost_dir)
-    knn_predictions, best_neighbor = load_best_knn_predictions(knn_dir)
-    prophet_predictions = load_prophet_predictions(prophet_dir)
-    stacked = build_aligned_stack_frame(xgb_predictions, knn_predictions, prophet_predictions)
+    prediction_frames = [load_seed_mean_predictions(xgboost_dir, "xgboost_pred")]
+    members = {"xgboost": args.xgboost_experiment}
 
-    feature_columns = ["xgboost_pred", "knn_pred", "prophet_pred"]
+    if args.catboost_experiment:
+        catboost_dir = OUTPUTS_TRAINING_DIR / "catboost" / args.catboost_experiment
+        prediction_frames.append(load_seed_mean_predictions(catboost_dir, "catboost_pred"))
+        members["catboost"] = args.catboost_experiment
+
+    if args.lstm_experiment:
+        lstm_dir = OUTPUTS_TRAINING_DIR / "lstm" / args.lstm_experiment
+        prediction_frames.append(load_seed_mean_predictions(lstm_dir, "lstm_pred"))
+        members["lstm"] = args.lstm_experiment
+
+    stacked = build_aligned_stack_frame(prediction_frames)
+
+    feature_columns = build_feature_columns(
+        include_catboost=bool(args.catboost_experiment),
+        include_lstm=bool(args.lstm_experiment),
+    )
     train_meta = stacked.loc[stacked["split"] == "val"].copy()
     test_meta = stacked.loc[stacked["split"] == "test"].copy()
 
-    model = LinearRegression()
-    model.fit(train_meta[feature_columns], train_meta["y_true"])
+    model = fit_meta_learner(args.meta_learner, train_meta, feature_columns)
 
     run_rows = []
     prediction_frames = []
     for split_name, frame in [("val", train_meta), ("test", test_meta)]:
         predictions = model.predict(frame[feature_columns])
-        metric_row = {"run_id": "stack_linear", "split": split_name}
+        metric_row = {"run_id": f"stack_{args.meta_learner}", "split": split_name}
         metric_row.update(compute_metrics(frame["y_true"], predictions))
         run_rows.append(metric_row)
 
@@ -113,23 +142,19 @@ def main() -> Path:
     predictions = pd.concat(prediction_frames, ignore_index=True)
     summary = summarize_run_metrics(run_metrics.loc[run_metrics["split"] == "test", ["run_id", "rmse", "mae", "r2"]])
 
-    output_dir = OUTPUTS_TRAINING_DIR / "stacking" / f"stack_linear__{args.output_tag}"
+    output_dir = OUTPUTS_TRAINING_DIR / "stacking" / f"stack_{args.meta_learner}__{args.output_tag}"
     metadata = {
         "model": "stacking",
-        "ensemble_type": "linear_regression",
-        "members": {
-            "xgboost": args.xgboost_experiment,
-            "knn": args.knn_experiment,
-            "prophet": args.prophet_experiment,
-        },
-        "selected_knn_neighbor_count": best_neighbor,
+        "ensemble_type": args.meta_learner,
+        "members": members,
         "aligned_row_count": int(len(stacked)),
         "aligned_val_row_count": int(len(train_meta)),
         "aligned_test_row_count": int(len(test_meta)),
         "feature_columns": feature_columns,
-        "coefficients": dict(zip(feature_columns, model.coef_.tolist())),
-        "intercept": float(model.intercept_),
     }
+    if args.meta_learner == "linear":
+        metadata["coefficients"] = dict(zip(feature_columns, model.coef_.tolist()))
+        metadata["intercept"] = float(model.intercept_)
     save_run_outputs(output_dir, run_metrics, predictions, summary, metadata)
     print(output_dir)
     return output_dir

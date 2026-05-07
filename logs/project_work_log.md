@@ -692,3 +692,63 @@ Date started: 2026-05-06
 - Practical research implication:
   - the novelty claim is now stronger as `structured multi-scale temporal context` rather than just `longer lag`
   - weekly memory looks more useful than medium-only lag expansion in this setup
+
+## Step 54: LSTM rescue scope locked
+
+- Decided to rescue the LSTM as a thesis-defensible sequence baseline rather than as a highly tuned deep-learning contribution.
+- Root issues identified in the current pipeline:
+  - sequence windows can cross timestamp gaps after missing-row filtering
+  - sequence features are not standardized with train-only statistics
+- Chosen repair scope:
+  - enforce contiguous hourly sequence windows per station
+  - add train-only feature scaling and simple target scaling
+  - keep the overall LSTM architecture simple and comparable
+
+## Step 55: Full benchmark expansion prepared
+
+- Added full benchmark trainer scripts for:
+  - `LightGBM`
+  - `CatBoost`
+- Design intent:
+  - mirror the repeated-run artifact structure already used for `XGBoost`
+  - keep the same prepared dataset, feature-group selection, and chronological split logic
+  - make the new models drop directly into the existing cross-model summarization flow
+- Added focused unit tests for trainer helper behavior and updated `requirements.txt` to include the new libraries.
+
+## Step 56: Separate fast LSTM tuning lane added
+
+- Added a separate small-and-fast tuning track so exploratory LSTM optimization does not overwrite the repaired benchmark.
+- Parameterized the LSTM trainer for:
+  - learning rate
+  - dropout
+  - LSTM unit widths
+- Added `src/tune_lstm_48h.py` with a predefined five-run tuning sweep using isolated output tags prefixed with `tune_`.
+- This tuning lane is intended as a side experiment only; the main repaired benchmark remains `lstm__repaired40`.
+
+## Step 57: CatBoost refined lag-ablation confirmation study
+
+- Ran the refined lag-ablation sweep on `CatBoost` using the same grouped feature sets as the XGBoost novelty study:
+  - `current_only`
+  - `baseline_limited`
+  - `short_lags`
+  - `short_plus_medium`
+  - `short_plus_weekly`
+  - `full_multiscale_no_rolling`
+  - `full_multiscale`
+- Main result:
+  - `baseline_limited` was the best CatBoost configuration with `RMSE 0.028641`
+- Practical interpretation:
+  - CatBoost does **not** reproduce the same refined lag-ablation pattern as XGBoost
+  - the multi-scale lag-design advantage is therefore not model-invariant across tree learners
+  - this makes `CatBoost` a strong benchmark and useful confirmation model, but not a better primary novelty anchor than XGBoost
+
+## Step 58: GRU benchmark track added
+
+- Added `src/train_gru_48h.py` as a sequence-model benchmark extension.
+- Design rule:
+  - reuse the repaired sequence pipeline exactly
+  - keep the same contiguous-window construction, train-only scaling, and chronological split logic
+  - change only the recurrent architecture from `LSTM` to `GRU`
+- Purpose:
+  - compare `GRU` against the repaired `LSTM`
+  - test whether the strong sequence result is architecture-specific or more general to repaired recurrent sequence modeling

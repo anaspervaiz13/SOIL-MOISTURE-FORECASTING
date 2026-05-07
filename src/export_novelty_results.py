@@ -18,11 +18,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export novelty-focused result tables and summary text.")
     parser.add_argument("--xgboost-ablation-tag", default="strong")
     parser.add_argument("--xgboost-best-experiment", default="full_multiscale")
+    parser.add_argument("--catboost-experiment", default="baseline_limited__confirm")
+    parser.add_argument("--lightgbm-experiment", default="full_multiscale__full")
+    parser.add_argument("--gru-experiment", default="gru__repaired40")
     parser.add_argument("--knn-experiment", default="baseline_limited__light")
-    parser.add_argument("--lstm-experiment", default="lstm__cpu40")
+    parser.add_argument("--lstm-experiment", default="lstm__repaired40")
     parser.add_argument("--prophet-experiment", default="prophet__safe")
     parser.add_argument("--arima-experiment", default="arima__safe180")
-    parser.add_argument("--stacking-experiment", default="stack_linear__aligned")
+    parser.add_argument("--stacking-experiment", default="stack_linear__xgb_lstm_linear")
     parser.add_argument("--output-dir", default=None)
     return parser.parse_args()
 
@@ -63,6 +66,21 @@ def _prediction_coverage(predictions_path: Path, filters: dict[str, object] | No
     }
 
 
+def _load_test_predictions(predictions_path: Path) -> pd.DataFrame:
+    predictions = pd.read_csv(predictions_path)
+    if "split" in predictions.columns:
+        predictions = predictions.loc[predictions["split"] == "test"].copy()
+
+    group_columns = ["station", "timestamp", "y_true"]
+    available_group_columns = [column for column in group_columns if column in predictions.columns]
+    if "y_pred" in predictions.columns and {"station", "timestamp", "y_true"}.issubset(predictions.columns):
+        predictions = (
+            predictions.groupby(["station", "timestamp", "y_true"], as_index=False)["y_pred"]
+            .mean()
+        )
+    return predictions
+
+
 def build_xgboost_ablation_table(root: Path, output_tag: str) -> pd.DataFrame:
     rows = []
     for experiment_dir in sorted(path for path in root.iterdir() if path.is_dir() and path.name.endswith(f"__{output_tag}")):
@@ -87,13 +105,18 @@ def build_xgboost_ablation_table(root: Path, output_tag: str) -> pd.DataFrame:
 
 def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.DataFrame:
     xgboost_dir = outputs_root / "xgboost" / args.xgboost_best_experiment
+    catboost_dir = outputs_root / "catboost" / args.catboost_experiment
+    lightgbm_dir = outputs_root / "lightgbm" / args.lightgbm_experiment
     knn_dir = outputs_root / "knn" / args.knn_experiment
     lstm_dir = outputs_root / "lstm" / args.lstm_experiment
+    gru_dir = outputs_root / "gru" / args.gru_experiment
     prophet_dir = outputs_root / "prophet" / args.prophet_experiment
     arima_dir = outputs_root / "arima" / args.arima_experiment
     stacking_dir = outputs_root / "stacking" / args.stacking_experiment
 
     xgboost_metrics = _read_summary_metrics(xgboost_dir / "summary_metrics.csv")
+    catboost_metrics = _read_summary_metrics(catboost_dir / "summary_metrics.csv")
+    lightgbm_metrics = _read_summary_metrics(lightgbm_dir / "summary_metrics.csv")
     knn_run_metrics = pd.read_csv(knn_dir / "run_metrics.csv")
     best_knn_neighbor = int(
         knn_run_metrics.loc[knn_run_metrics["split"] == "val"].sort_values(["rmse", "neighbor_count"]).iloc[0]["neighbor_count"]
@@ -102,13 +125,17 @@ def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.Da
         (knn_run_metrics["split"] == "test") & (knn_run_metrics["neighbor_count"] == best_knn_neighbor)
     ].iloc[0]
     lstm_metrics = _read_summary_metrics(lstm_dir / "summary_metrics.csv")
+    gru_metrics = _read_summary_metrics(gru_dir / "summary_metrics.csv")
     prophet_metrics = _read_summary_metrics(prophet_dir / "summary_metrics.csv")
     arima_metrics = _read_summary_metrics(arima_dir / "summary_metrics.csv")
     stacking_metrics = _read_summary_metrics(stacking_dir / "summary_metrics.csv")
     stacking_metadata = _read_json(stacking_dir / "run_metadata.json")
     xgboost_coverage = _prediction_coverage(xgboost_dir / "predictions.csv")
+    catboost_coverage = _prediction_coverage(catboost_dir / "predictions.csv")
+    lightgbm_coverage = _prediction_coverage(lightgbm_dir / "predictions.csv")
     knn_coverage = _prediction_coverage(knn_dir / "predictions.csv", filters={"neighbor_count": best_knn_neighbor})
     lstm_coverage = _prediction_coverage(lstm_dir / "predictions.csv")
+    gru_coverage = _prediction_coverage(gru_dir / "predictions.csv")
     prophet_coverage = _prediction_coverage(prophet_dir / "predictions.csv")
     arima_coverage = _prediction_coverage(arima_dir / "predictions.csv")
     stacking_coverage = _prediction_coverage(stacking_dir / "predictions.csv")
@@ -121,6 +148,22 @@ def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.Da
             "selection_basis": "preselected repeated-seed experiment",
             **xgboost_metrics,
             **xgboost_coverage,
+        },
+        {
+            "model": "CatBoost",
+            "configuration": "best saved confirmation-tree run",
+            "experiment": args.catboost_experiment,
+            "selection_basis": "preselected repeated-seed experiment",
+            **catboost_metrics,
+            **catboost_coverage,
+        },
+        {
+            "model": "LightGBM",
+            "configuration": "full_multiscale repeated-seed run",
+            "experiment": args.lightgbm_experiment,
+            "selection_basis": "preselected repeated-seed experiment",
+            **lightgbm_metrics,
+            **lightgbm_coverage,
         },
         {
             "model": "KNN",
@@ -140,11 +183,19 @@ def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.Da
         },
         {
             "model": "LSTM",
-            "configuration": "lookback=168, cpu40 repeated-seed run",
+            "configuration": "lookback=168, repaired40 repeated-seed run",
             "experiment": args.lstm_experiment,
             "selection_basis": "preselected repeated-seed experiment",
             **lstm_metrics,
             **lstm_coverage,
+        },
+        {
+            "model": "GRU",
+            "configuration": "lookback=168, repaired40 repeated-seed run",
+            "experiment": args.gru_experiment,
+            "selection_basis": "preselected repeated-seed experiment",
+            **gru_metrics,
+            **gru_coverage,
         },
         {
             "model": "Prophet",
@@ -164,7 +215,11 @@ def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.Da
         },
         {
             "model": "Stacking",
-            "configuration": f"aligned linear stack, knn={stacking_metadata['selected_knn_neighbor_count']}",
+            "configuration": (
+                f"aligned linear stack, knn={stacking_metadata['selected_knn_neighbor_count']}"
+                if "selected_knn_neighbor_count" in stacking_metadata
+                else f"{stacking_metadata.get('ensemble_type', 'stack')} stack"
+            ),
             "experiment": args.stacking_experiment,
             "selection_basis": "validation-fit aligned ensemble",
             **stacking_metrics,
@@ -174,6 +229,49 @@ def build_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.Da
 
     summary = pd.DataFrame(rows).sort_values(["model", "experiment"]).reset_index(drop=True)
     return summary
+
+
+def build_common_subset_benchmark_table(outputs_root: Path, args: argparse.Namespace) -> pd.DataFrame:
+    selected = [
+        ("XGBoost", outputs_root / "xgboost" / args.xgboost_best_experiment),
+        ("CatBoost", outputs_root / "catboost" / args.catboost_experiment),
+        ("LightGBM", outputs_root / "lightgbm" / args.lightgbm_experiment),
+        ("LSTM", outputs_root / "lstm" / args.lstm_experiment),
+        ("GRU", outputs_root / "gru" / args.gru_experiment),
+        ("Stacking", outputs_root / "stacking" / args.stacking_experiment),
+    ]
+
+    prediction_frames: dict[str, pd.DataFrame] = {}
+    common_keys: pd.DataFrame | None = None
+    for model_name, experiment_dir in selected:
+        predictions = _load_test_predictions(experiment_dir / "predictions.csv")
+        prediction_frames[model_name] = predictions
+        keys = predictions[["station", "timestamp"]].drop_duplicates()
+        common_keys = keys if common_keys is None else common_keys.merge(keys, on=["station", "timestamp"], how="inner")
+
+    rows = []
+    for model_name, experiment_dir in selected:
+        predictions = prediction_frames[model_name].merge(common_keys, on=["station", "timestamp"], how="inner")
+        y_true = predictions["y_true"]
+        y_pred = predictions["y_pred"]
+        rmse = float((((y_true - y_pred) ** 2).mean()) ** 0.5)
+        mae = float((y_true - y_pred).abs().mean())
+        ss_res = float(((y_true - y_pred) ** 2).sum())
+        ss_tot = float(((y_true - y_true.mean()) ** 2).sum())
+        r2 = 1.0 - (ss_res / ss_tot) if ss_tot else 0.0
+        rows.append(
+            {
+                "model": model_name,
+                "experiment": experiment_dir.name,
+                "common_test_prediction_rows": int(len(predictions)),
+                "common_test_unique_keys": int(len(common_keys)),
+                "rmse_mean": rmse,
+                "mae_mean": mae,
+                "r2_mean": r2,
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values("rmse_mean").reset_index(drop=True)
 
 
 def build_markdown_summary(ablation: pd.DataFrame, benchmark: pd.DataFrame) -> str:
@@ -217,10 +315,12 @@ def main() -> Path:
 
     ablation = build_xgboost_ablation_table(OUTPUTS_TRAINING_DIR / "xgboost", args.xgboost_ablation_tag)
     benchmark = build_benchmark_table(OUTPUTS_TRAINING_DIR, args)
+    common_subset_benchmark = build_common_subset_benchmark_table(OUTPUTS_TRAINING_DIR, args)
     markdown = build_markdown_summary(ablation, benchmark)
 
     ablation.to_csv(output_dir / "xgboost_ablation_table.csv", index=False)
     benchmark.to_csv(output_dir / "benchmark_table.csv", index=False)
+    common_subset_benchmark.to_csv(output_dir / "common_subset_benchmark_table.csv", index=False)
     (output_dir / "novelty_results_summary.md").write_text(markdown, encoding="utf-8")
 
     print(output_dir)

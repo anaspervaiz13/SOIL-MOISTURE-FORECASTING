@@ -1,0 +1,28 @@
+{
+  "model": "lstm",
+  "output_tag": "repaired_smoke",
+  "lookback": 168,
+  "sequence_features": [
+    "sm_0.05m",
+    "sm_0.20m",
+    "sm_0.50m",
+    "ta_2.00m",
+    "ts_0.05m",
+    "ts_0.20m",
+    "ts_0.50m",
+    "precipitation",
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos"
+  ],
+  "seeds": [
+    42
+  ],
+  "epochs": 8,
+  "batch_size": 256,
+  "patience": 3,
+  "target_column": "target_48h",
+  "feature_scaling": "train_only_standardization",
+  "target_scaling": "train_only_standardization"
+}

@@ -1,0 +1,30 @@
+{
+  "model": "catboost",
+  "feature_group": "current_only",
+  "output_tag": "confirm",
+  "feature_count": 16,
+  "features": [
+    "precipitation",
+    "sm_0.05m",
+    "sm_0.20m",
+    "sm_0.50m",
+    "ta_2.00m",
+    "ts_0.05m",
+    "ts_0.20m",
+    "ts_0.50m",
+    "hour",
+    "dayofweek",
+    "month",
+    "dayofyear",
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos"
+  ],
+  "seeds": [
+    42,
+    52,
+    62
+  ],
+  "target_column": "target_48h"
+}

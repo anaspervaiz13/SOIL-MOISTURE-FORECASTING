@@ -1,0 +1,24 @@
+(base) PS C:\Users\HP\Desktop\UNI\SOIL-MOISTURE-FORECASTING> python src\train_lstm_48h.py --epochs 8 --batch-size 256 --patience 3 --lookback 168 --seeds 42 --output-tag repaired_smoke
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1778125189.614966   20572 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1778125194.177012   20572 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+TensorFlow devices | CPU: 1 | GPU: 0
+GPU unavailable. Running CPU-only.
+I0000 00:00:1778125279.749636   20572 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Epoch 1/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 100s 552ms/step - loss: 0.3438 - val_loss: 0.2169
+Epoch 2/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 93s 554ms/step - loss: 0.1763 - val_loss: 0.1520
+Epoch 3/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 93s 555ms/step - loss: 0.1511 - val_loss: 0.1461
+Epoch 4/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 96s 569ms/step - loss: 0.1429 - val_loss: 0.1496
+Epoch 5/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 87s 520ms/step - loss: 0.1418 - val_loss: 0.1508
+Epoch 6/8
+168/168 ━━━━━━━━━━━━━━━━━━━━ 95s 563ms/step - loss: 0.1402 - val_loss: 0.1506
+C:\Users\HP\Desktop\UNI\SOIL-MOISTURE-FORECASTING\outputs\training\lstm\lstm__repaired_smoke
+(base) PS C:\Users\HP\Desktop\UNI\SOIL-MOISTURE-FORECASTING> 

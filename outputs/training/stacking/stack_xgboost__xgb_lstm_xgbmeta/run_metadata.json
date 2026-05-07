@@ -1,0 +1,15 @@
+{
+  "model": "stacking",
+  "ensemble_type": "xgboost",
+  "members": {
+    "xgboost": "full_multiscale",
+    "lstm": "lstm__repaired40"
+  },
+  "aligned_row_count": 12179,
+  "aligned_val_row_count": 7913,
+  "aligned_test_row_count": 4266,
+  "feature_columns": [
+    "xgboost_pred",
+    "lstm_pred"
+  ]
+}
